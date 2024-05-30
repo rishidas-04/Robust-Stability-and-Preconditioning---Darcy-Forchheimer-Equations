@@ -34,12 +34,10 @@ module DarcyConvergenceTests
     for nk in 1:nkmax
         println("******** Refinement step: $nk")
         model=generate_model2d(nk)
-        op,_=assemble_darcy(model, k, κ, ν, c0, u_ex, p_ex)
+        op,dΩ,_=assemble_darcy(model, k, κ, ν, c0, u_ex, p_ex)
         xh=solve_darcy(op)
         uh, ph = xh
         ndofs=num_free_dofs(Gridap.FESpaces.get_fe_space(xh))
-        Ω = Triangulation(model)
-        dΩ = Measure(Ω,2*(k+2))
 
         error_u,error_p =
           compute_errors_darcy(xh, dΩ, κ, ν, c0, u_ex, p_ex)
@@ -55,13 +53,13 @@ module DarcyConvergenceTests
             push!(rp, log(ep[nk]/ep[nk-1])/log(hh[nk]/hh[nk-1]))
         end
     end
-    println("============================================================================================================================")
+    println("=======================================================")
     println("   DoF  &    h   &   e(u)   &  r(u) &   e(p)   &  r(p) ")
-    println("============================================================================================================================")
+    println("=======================================================")
     for nk in 1:nkmax
         @printf("%7d & %.4f & %.2e & %.3f & %.2e & %.3f\n", 
                 nn[nk], hh[nk], eu[nk], ru[nk], ep[nk], rp[nk]);
     end
-    println("============================================================================================================================")
+    println("=======================================================")
   end
 end
