@@ -1,3 +1,11 @@
+# This is a grad(div) problem 
+# k^-1*u - grad(div(u)) = rhs1
+# c_0*p + div(u) = rhs2
+
+# ∫k^1 u⋅v + ∫div(u)div(v) 
+
+
+
 function generate_model2d(nk)
   domain =(0,1,0,1)
   n      = 2^nk + 1
