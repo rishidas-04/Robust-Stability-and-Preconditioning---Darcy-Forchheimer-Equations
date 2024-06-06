@@ -10,7 +10,7 @@ module GridapPertubedSaddlePointPreconditioners
     include("Preconditioners.jl")
     include("ConstantFESpaces.jl")
 
-    export assemble_darcy, compute_errors_darcy
+    export assemble_perturbed_darcy, assemble_darcy, compute_errors_darcy, compute_errors_perturbed_darcy
     export generate_model2d
     export GridapLinearSolverPreconditioner
 end
