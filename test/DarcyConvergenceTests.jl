@@ -5,6 +5,7 @@ module DarcyConvergenceTests
   using Printf
   using Test
 
+  const write_solution_to_vtk = false
 
   # Arbitrary model parameters
   const κ = 1
@@ -38,6 +39,12 @@ module DarcyConvergenceTests
         xh=solve_darcy(op)
         uh, ph = xh
         ndofs=num_free_dofs(Gridap.FESpaces.get_fe_space(xh))
+
+        if (write_solution_to_vtk)
+          Ω = Triangulation(model)
+          writevtk(Ω, "convergence_results_$nk",
+                  cellfields=["uh"=>uh, "ph"=>ph])
+        end
 
         error_u,error_p =
           compute_errors_darcy(xh, dΩ, u_ex, p_ex)
