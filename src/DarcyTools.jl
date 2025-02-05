@@ -61,7 +61,7 @@ function assemble_darcy(model, k, κ, u_ex, p_ex)
   dΓ = Measure(Γ,2*(k+2))
 
   a((u, p, ϕ),(v, q, ψ)) = ∫( (1/κ)*(u⋅v) )*dΩ - ∫(q*(∇⋅u))*dΩ - ∫((∇⋅v)*p)*dΩ + ∫(p*ψ)dΩ + ∫(q*ϕ)dΩ 
-  b((v, q)) = ∫((1/κ)*(u_ex⋅v))*dΩ + ∫(∇(p_ex)⋅v)*dΩ - ∫(q*(∇⋅u_ex))*dΩ + ∫(p_ex*ψ)dΩ
+  b((v, q, ψ)) = ∫((1/κ)*(u_ex⋅v))*dΩ + ∫(∇(p_ex)⋅v)*dΩ - ∫(q*(∇⋅u_ex))*dΩ + ∫(p_ex*ψ)dΩ
 
 
   # Build affine FE operator

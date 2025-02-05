@@ -34,13 +34,13 @@ module DarcyConvergenceTests
     for nk in 1:nkmax
         println("******** Refinement step: $nk")
         model=generate_model2d(nk)
-        op,dΩ,_=assemble_darcy(model, k, κ, ν, c0, u_ex, p_ex)
+        op,dΩ,_=assemble_darcy(model, k, κ, u_ex, p_ex)
         xh=solve_darcy(op)
         uh, ph = xh
         ndofs=num_free_dofs(Gridap.FESpaces.get_fe_space(xh))
 
         error_u,error_p =
-          compute_errors_darcy(xh, dΩ, κ, ν, c0, u_ex, p_ex)
+          compute_errors_darcy(xh, dΩ, u_ex, p_ex)
 
         push!(nn,ndofs)
         push!(hh,sqrt(2)/(2^nk))
