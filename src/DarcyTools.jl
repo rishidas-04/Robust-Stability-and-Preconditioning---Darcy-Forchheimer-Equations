@@ -76,9 +76,9 @@ function compute_errors_perturbed_darcy(xh, dΩ, u_ex, p_ex)
   error_u,error_p
 end
 
-function compute_errors_darcy(xh, dΩ, u_ex, p_ex)
+function compute_errors_darcy(xh, dΩ, κ, u_ex, p_ex)
   uh, ph, _ = xh
-  error_u = sqrt(sum(∫((u_ex-uh)⋅(u_ex-uh))*dΩ + ∫((∇⋅(u_ex-uh))*(∇⋅(u_ex-uh)))*dΩ))
+  error_u = sqrt(sum(∫(1.0/κ*(u_ex-uh)⋅(u_ex-uh))*dΩ + ∫((∇⋅(u_ex-uh))*(∇⋅(u_ex-uh)))*dΩ))
   error_p = sqrt(sum(∫((p_ex-ph)*(p_ex-ph))*dΩ))
   error_u,error_p
 end

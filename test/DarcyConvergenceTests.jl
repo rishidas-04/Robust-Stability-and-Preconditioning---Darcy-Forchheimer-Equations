@@ -47,7 +47,7 @@ module DarcyConvergenceTests
         end
 
         error_u,error_p =
-          compute_errors_darcy(xh, dΩ, u_ex, p_ex)
+          compute_errors_darcy(xh, dΩ, κ, u_ex, p_ex)
 
         push!(nn,ndofs)
         push!(hh,sqrt(2)/(2^nk))
