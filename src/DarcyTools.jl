@@ -112,6 +112,8 @@ function assemble_darcy_riesz_mapping_preconditioner_blocks(op, dΩ, dΓ, dΛ,
   end
 end
 
+
+
 function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, κ, u_ex, p_ex)
 
   blocks=assemble_darcy_riesz_mapping_preconditioner_blocks(op, dΩ, dΓ, dΛ,
@@ -137,16 +139,19 @@ function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, κ, u_ex, p_ex)
 
 
   freedofs = get_free_dof_values(eph)
+  newfreedofs = zeros(length(freedofs))
   auxM = A22_inv
   auxr=copy(freedofs)
   rtol=1.0e-14
+
   function custom_stopping_condition(solver::KrylovSolver, A, b, r, tol)
     mul!(r, A, solver.x)
     r .-= b                       # r := b - Ax
     bool = norm(r) ≤ tol*norm(b)  # tolerance based on the 2-norm of the residual
-    @printf("ERR NORM: ||b-Ax||/||b||: %16.7e\n",norm(r)/norm(b))
+    #@printf("ERR NORM: ||b-Ax||/||b||: %16.7e\n",norm(r)/norm(b))
     return bool
   end
+  
   minres_callback(solver) = custom_stopping_condition(solver, auxM, freedofs, auxr, rtol)
   # Using minres here for simplicity, but one could 
   # use pcg as well, as A is SPD

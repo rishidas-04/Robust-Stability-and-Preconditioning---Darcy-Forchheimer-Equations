@@ -1,8 +1,7 @@
 struct GridapLinearSolverPreconditioner{A,B}
   numerical_setup::A
   matrix::B
-  function GridapLinearSolverPreconditioner(matrix)
-    ls=LUSolver()
+  function GridapLinearSolverPreconditioner(matrix;ls=LUSolver())
     ss=symbolic_setup(ls,matrix)
     ns=numerical_setup(ss,matrix)
     A=typeof(ns)
@@ -15,7 +14,7 @@ function LinearAlgebra.mul!(z::AbstractVector{T},
               M::GridapLinearSolverPreconditioner,
               r::AbstractVector{T}) where T
   # Solve Mz=r ...
-  solve!(z,M.numerical_setup,r)
+  Gridap.solve!(z,M.numerical_setup,r)
 end
 
 function LinearOperators.LinearOperator(solver::GridapLinearSolverPreconditioner)
@@ -31,4 +30,3 @@ function LinearOperators.LinearOperator(solver::GridapLinearSolverPreconditioner
   end
   LinearOperator(Float64, size(solver.matrix,1), size(solver.matrix,2), true, true, apply)
 end 
-
