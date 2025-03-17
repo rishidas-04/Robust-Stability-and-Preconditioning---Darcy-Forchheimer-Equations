@@ -82,3 +82,82 @@ function compute_errors_darcy(xh, dΩ, κ, u_ex, p_ex)
   error_p = sqrt(sum(∫((p_ex-ph)*(p_ex-ph))*dΩ))
   error_u,error_p
 end
+
+function compute_operator_norm(B,xh)
+  x=get_free_dof_values(xh)
+  sqrt(dot(x,B*x))
+end
+
+function assemble_darcy_riesz_mapping_preconditioner_blocks(op, dΩ, dΓ, dΛ,
+  h_e, κ; prec_variant=:B1)
+  X1,X2,X3 = op.trial
+  Y1,Y2,Y3 = op.test 
+
+  @assert prec_variant in (:B1,:B2)
+  if (prec_variant==:B1)
+    a11_B1(u,v)=∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ
+    a22_B1(p,q)= ∫((1.0+κ)*p*q)dΩ
+    a33_B1(ϕ,ψ) = ∫(ϕ*ψ)dΩ
+
+    A11,A22,A33 = assemble_matrix(a11_B1,X1,Y1),assemble_matrix(a22_B1,X2,Y2),assemble_matrix(a33_B1,X3,Y3)
+    return A11,A22,A33
+  else
+    a11_B2(u,v)=∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ
+    a22a_B2(p,q)= ∫(p*q)dΩ
+    a22b_B2(p,q)= ∫(κ*(∇(p))⋅∇(q))dΩ + ∫(κ/h_e*jump(p)*jump(q))dΛ
+    a33_B2(ϕ,ψ) = ∫(ϕ*ψ)dΩ
+
+    A11,A22a,A22b,A33 = assemble_matrix(a11_B2,X1,Y1),assemble_matrix(a22a_B2,X2,Y2),assemble_matrix(a22b_B2,X2,Y2),assemble_matrix(a33_B2,X3,Y3)
+    return A11,A22a,A22b,A33
+  end
+end
+
+function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, κ, u_ex, p_ex)
+
+  blocks=assemble_darcy_riesz_mapping_preconditioner_blocks(op, dΩ, dΓ, dΛ,
+                                                         h_e,
+                                                         κ;
+                                                         prec_variant=:B2)
+
+  A11,A22a,A22b,A33=blocks
+  A11 = LinearOperator(A11)
+  A22 = LinearOperator(A22a)+LinearOperator(A22b)
+
+  A22_inv = LinearOperator(GridapLinearSolverPreconditioner(A22a))+
+                LinearOperator(GridapLinearSolverPreconditioner(A22b))
+
+  A33 = LinearOperator(A33)   
+
+  uh, ph, _ = xh
+  eu = u_ex-uh
+  ep = p_ex-ph
+  X1,X2,_ = op.trial
+  euh=interpolate(eu,X1)
+  eph=interpolate(ep,X2)
+
+
+  freedofs = get_free_dof_values(eph)
+  auxM = A22_inv
+  auxr=copy(freedofs)
+  rtol=1.0e-14
+  function custom_stopping_condition(solver::KrylovSolver, A, b, r, tol)
+    mul!(r, A, solver.x)
+    r .-= b                       # r := b - Ax
+    bool = norm(r) ≤ tol*norm(b)  # tolerance based on the 2-norm of the residual
+    @printf("ERR NORM: ||b-Ax||/||b||: %16.7e\n",norm(r)/norm(b))
+    return bool
+  end
+  minres_callback(solver) = custom_stopping_condition(solver, auxM, freedofs, auxr, rtol)
+  # Using minres here for simplicity, but one could 
+  # use pcg as well, as A is SPD
+  (newfreedofs, stats) = minres(auxM, freedofs, M=A22; itmax=2000, verbose=1,
+                        callback=minres_callback,
+                        atol=0.0,
+                        rtol=0.0,
+                        etol=0.0) 
+
+  weighted_norm = sqrt(dot(newfreedofs,freedofs))
+
+  return compute_operator_norm(A11,euh), weighted_norm #compute_operator_norm(A22,eph)
+
+end

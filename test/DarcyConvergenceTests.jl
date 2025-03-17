@@ -31,11 +31,11 @@ module DarcyConvergenceTests
     push!(ru,0.)
     push!(rp,0.)
 
-    nkmax=6
+    nkmax=4
     for nk in 1:nkmax
         println("******** Refinement step: $nk")
         model=generate_model2d(nk)
-        op,dΩ,_=assemble_darcy(model, k, κ, u_ex, p_ex)
+        op,dΩ,_,_=assemble_darcy(model, k, κ, u_ex, p_ex)
         xh=solve_darcy(op)
         uh, ph = xh
         ndofs=num_free_dofs(Gridap.FESpaces.get_fe_space(xh))
