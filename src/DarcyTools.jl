@@ -168,16 +168,20 @@ function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, u_e
 end
 
 function assemble_linear_elasticity(model, k, μ, λ, u_ex, p_ex)
-  reffe_u = ReferenceFE(lagrangian,VectorValue{2,Float64},k+2)
-  reffe_p = ReferenceFE(lagrangian,Float64,k+1)
+  reffe_u = ReferenceFE(lagrangian,VectorValue{2,Float64},k+1)
+  reffe_p = ReferenceFE(lagrangian,Float64,k)
   
   # FESpaces (P2-P0)
    #Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:H1)
    #Qh_ = TestFESpace(model,reffe_p,conformity=:L2)
 
   # FESpaces (Hood-Taylor)
+  #  Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:H1)
+  #  Qh_ = TestFESpace(model,reffe_p,conformity=:C0)
+
+  # FESpaces (Crouzeix-Raviart)
    Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:H1)
-   Qh_ = TestFESpace(model,reffe_p,conformity=:C0)
+   Qh_ = TestFESpace(model,reffe_p,conformity=:L2, constraint=:zeromean)
 
   # Define non-conforming velocity space
   # Uh_ = TestFESpace(model, reffe_u, dirichlet_tags="boundary", conformity=:H1)
