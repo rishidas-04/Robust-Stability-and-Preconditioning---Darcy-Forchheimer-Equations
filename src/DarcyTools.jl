@@ -166,3 +166,55 @@ function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, u_e
   return compute_operator_norm(A11,euh), weighted_norm #compute_operator_norm(A22,eph)
 
 end
+
+function assemble_linear_elasticity(model, k, μ, λ, u_ex, p_ex)
+  reffe_u = ReferenceFE(lagrangian,VectorValue{2,Float64},k+2)
+  reffe_p = ReferenceFE(lagrangian,Float64,k+1)
+  
+  # FESpaces (P2-P0)
+   #Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:H1)
+   #Qh_ = TestFESpace(model,reffe_p,conformity=:L2)
+
+  # FESpaces (Hood-Taylor)
+   Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:H1)
+   Qh_ = TestFESpace(model,reffe_p,conformity=:C0)
+
+  # Define non-conforming velocity space
+  # Uh_ = TestFESpace(model, reffe_u, dirichlet_tags="boundary", conformity=:H1)
+  
+  # Define pressure space with mean-zero constraint
+  # Qh_ = TestFESpace(model, reffe_p, conformity=:L2, constraint=:zeromean)  
+
+  Uh = TrialFESpace(Uh_,u_ex)
+  Qh = TrialFESpace(Qh_)
+
+  Yh = MultiFieldFESpace([Uh_,Qh_])
+  Xh = MultiFieldFESpace([Uh,Qh])
+
+  Ω = Triangulation(model)
+  dΩ = Measure(Ω,2*(k+2))
+  Γ = BoundaryTriangulation(model)
+  n_Γ = get_normal_vector(Γ)
+  dΓ = Measure(Γ,2*(k+2))
+
+  Id = TensorValue(1.0,0.0,0.0,1.0)
+  
+    σ_ex(x) = 2*μ*ε(u_ex)(x)- p_ex(x)*Id
+    b_ex(x) = -(∇⋅σ_ex)(x)
+  
+  lhs((u,p),(v,q)) =  ∫(2*μ*ε(v)⊙ε(u))dΩ -∫((∇⋅v)*p)dΩ -
+  ∫((∇⋅u)*q)dΩ       -∫(1/λ*p*q)dΩ   
+  
+  rhs((v,q)) = ∫(b_ex⋅v)dΩ
+  
+  op = AffineFEOperator(lhs,rhs,Xh,Yh)
+  op, dΩ, dΓ
+  
+end
+
+function compute_errors_linear_elasticity(xh, dΩ, μ, u_ex, p_ex)
+  uh, ph = xh
+  error_u = sqrt(2*μ)*sqrt(sum(∫((u_ex-uh)⋅(u_ex-uh))*dΩ +∫(∇(u_ex-uh)⊙∇(u_ex - uh))*dΩ))
+  error_p = 1/sqrt(2*μ)*sqrt(sum(∫((p_ex-ph)*(p_ex-ph))*dΩ))
+  error_u,error_p
+end
