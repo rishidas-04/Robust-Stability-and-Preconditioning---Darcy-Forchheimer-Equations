@@ -32,7 +32,7 @@ module RobustDarcyConvergenceTests
     push!(ru,0.)
     push!(rp,0.)
 
-    nkmax=4
+    nkmax=6
     for nk in 1:nkmax
         println("******** Refinement step: $nk")
         model=generate_model2d(nk)
@@ -49,14 +49,17 @@ module RobustDarcyConvergenceTests
 
         Λ  = SkeletonTriangulation(model)
         dΛ = Measure(Λ,3)
+        Γ = BoundaryTriangulation(model)
+        dΓ = Measure(Γ,3)
         h_e = CellField(get_array(∫(1)dΛ),Λ)
+        h_e_Γ = CellField(get_array(∫(1)dΓ),Γ)
 
 
         #error_u,error_p =
         #  compute_errors_darcy(xh, dΩ, κ, u_ex, p_ex)
 
         error_u,error_p =
-          compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e,  κ, u_ex, p_ex)  
+          compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, u_ex, p_ex)  
 
         push!(nn,ndofs)
         push!(hh,sqrt(2)/(2^nk))

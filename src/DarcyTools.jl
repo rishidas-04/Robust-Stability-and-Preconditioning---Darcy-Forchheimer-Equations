@@ -26,7 +26,7 @@ function assemble_perturbed_darcy(model, k, κ, ν, c0, u_ex, p_ex)
    dΩ = Measure(Ω,2*(k+2))
    Γ = BoundaryTriangulation(model)
    n_Γ = get_normal_vector(Γ)
-   dΓ = Measure(Γ,2*(k+2))
+   dΓ = Measure(Γ,2*(k+2)-1)
 
    a((u, p),(v, q)) = ∫( (ν/κ)*(u⋅v) )*dΩ +∫((ν^2/κ)*(∇⋅u)*(∇⋅v) )*dΩ - ∫(q*(∇⋅u))*dΩ - ∫((∇⋅v)*p)*dΩ - ∫(c0*p*q)*dΩ
    b((v, q)) = ∫((ν/κ)*(u_ex⋅v))*dΩ - ∫((ν^2/κ)*((∇(∇⋅u_ex))⋅v))*dΩ + ∫(∇(p_ex)⋅v)*dΩ - ∫(c0*(p_ex*q))*dΩ - ∫(q*(∇⋅u_ex))*dΩ
@@ -58,7 +58,7 @@ function assemble_darcy(model, k, κ, u_ex, p_ex)
   dΩ = Measure(Ω,2*(k+2))
   Γ = BoundaryTriangulation(model)
   n_Γ = get_normal_vector(Γ)
-  dΓ = Measure(Γ,2*(k+2))
+  dΓ = Measure(Γ,2*(k+2)-1)
 
   a((u, p, ϕ),(v, q, ψ)) = ∫( (1/κ)*(u⋅v) )*dΩ - ∫(q*(∇⋅u))*dΩ - ∫((∇⋅v)*p)*dΩ + ∫(p*ψ)dΩ + ∫(q*ϕ)dΩ 
   b((v, q, ψ)) = ∫((1/κ)*(u_ex⋅v))*dΩ + ∫(∇(p_ex)⋅v)*dΩ - ∫(q*(∇⋅u_ex))*dΩ + ∫(p_ex*ψ)dΩ
@@ -89,22 +89,22 @@ function compute_operator_norm(B,xh)
 end
 
 function assemble_darcy_riesz_mapping_preconditioner_blocks(op, dΩ, dΓ, dΛ,
-  h_e, κ; prec_variant=:B1)
+  h_e, h_e_Γ, κ; prec_variant=:B1)
   X1,X2,X3 = op.trial
   Y1,Y2,Y3 = op.test 
 
   @assert prec_variant in (:B1,:B2)
   if (prec_variant==:B1)
     a11_B1(u,v)=∫((1.0/κ)*(u⋅v)+(1.0/κ)*(∇⋅u)*(∇⋅v))dΩ
-    a22_B1(p,q)= ∫((1.0+2.0*κ)*p*q)dΩ
+    a22_B1(p,q)= ∫(κ*p*q)dΩ
     a33_B1(ϕ,ψ) = ∫(ϕ*ψ)dΩ
 
     A11,A22,A33 = assemble_matrix(a11_B1,X1,Y1),assemble_matrix(a22_B1,X2,Y2),assemble_matrix(a33_B1,X3,Y3)
     return A11,A22,A33
   else
-    a11_B2(u,v)=∫((1.0/κ)*(u⋅v)+(1.0/κ)*(∇⋅u)*(∇⋅v))dΩ
+    a11_B2(u,v)=∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ
     a22a_B2(p,q)= ∫(p*q)dΩ
-    a22b_B2(p,q)= ∫((p*q))dΩ + ∫(κ*(∇(p))⋅∇(q))dΩ + ∫(κ/h_e*jump(p)*jump(q))dΛ #+ ∫((κ/h_e_Γ)*p*q)dΓ
+    a22b_B2(p,q)=  ∫(κ*(∇(p))⋅∇(q))dΩ + ∫(κ/h_e*jump(p)*jump(q))dΛ + ∫((κ/h_e_Γ)*p*q)dΓ
     a33_B2(ϕ,ψ) = ∫(ϕ*ψ)dΩ
 
     A11,A22a,A22b,A33 = assemble_matrix(a11_B2,X1,Y1),assemble_matrix(a22a_B2,X2,Y2),assemble_matrix(a22b_B2,X2,Y2),assemble_matrix(a33_B2,X3,Y3)
@@ -114,10 +114,10 @@ end
 
 
 
-function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, κ, u_ex, p_ex)
+function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, u_ex, p_ex)
 
   blocks=assemble_darcy_riesz_mapping_preconditioner_blocks(op, dΩ, dΓ, dΛ,
-                                                         h_e,
+                                                         h_e, h_e_Γ,
                                                          κ;
                                                          prec_variant=:B2)
 
