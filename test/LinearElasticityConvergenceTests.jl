@@ -6,8 +6,8 @@ using GridapPertubedSaddlePointPreconditioners
   using Printf
 
   const write_solution_to_vtk = false
-  const μ = 1
-  const λ = 1
+  const μ = 0
+  const λ = 10000
 
   u_ex(x)  = VectorValue((sin(π*x[1]))*cos(π*x[2]),
    sin(π*x[2])*(cos(π*x[1])))
@@ -44,7 +44,7 @@ for k in 0:0
       end
 
       error_u,error_p =
-          compute_errors_linear_elasticity(xh, dΩ, μ, u_ex, p_ex)
+          compute_errors_linear_elasticity(xh, dΩ, μ, λ, u_ex, p_ex)
 
 
       push!(nn,ndofs)

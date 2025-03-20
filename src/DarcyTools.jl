@@ -216,9 +216,10 @@ function assemble_linear_elasticity(model, k, μ, λ, u_ex, p_ex)
   
 end
 
-function compute_errors_linear_elasticity(xh, dΩ, μ, u_ex, p_ex)
+function compute_errors_linear_elasticity(xh, dΩ, μ, λ, u_ex, p_ex)
   uh, ph = xh
   error_u = sqrt(2*μ)*sqrt(sum(∫((u_ex-uh)⋅(u_ex-uh))*dΩ +∫(∇(u_ex-uh)⊙∇(u_ex - uh))*dΩ))
-  error_p = 1/sqrt(2*μ)*sqrt(sum(∫((p_ex-ph)*(p_ex-ph))*dΩ))
+  #error_p = 1/sqrt(2*μ)*sqrt(sum(∫((p_ex-ph)*(p_ex-ph))*dΩ))
+  error_p = sqrt(sum(∫((1.0/√μ)*(p_ex-ph)*(p_ex-ph))*dΩ + ∫((1.0/√λ)*(p_ex-ph)*(p_ex-ph))*dΩ))
   error_u,error_p
 end
