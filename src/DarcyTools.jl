@@ -15,12 +15,14 @@ function assemble_perturbed_darcy(model, k, κ, ν, c0, u_ex, p_ex)
    # FESpaces
    Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:HDiv)
    Qh_ = TestFESpace(model,reffe_p,conformity=:L2)
+   Lh_ = ConstantFESpace(model)
 
    Uh = TrialFESpace(Uh_,u_ex)
    Qh = TrialFESpace(Qh_)
+   Lh = TrialFESpace(Lh_)
 
-   Yh = MultiFieldFESpace([Uh_,Qh_])
-   Xh = MultiFieldFESpace([Uh,Qh])
+   Yh = MultiFieldFESpace([Uh_,Qh_,Lh_])
+   Xh = MultiFieldFESpace([Uh,Qh,Lh])
 
    Ω = Triangulation(model)
    dΩ = Measure(Ω,2*(k+2))
