@@ -172,16 +172,17 @@ function assemble_linear_elasticity(model, k, μ, λ, u_ex, p_ex)
   reffe_p = ReferenceFE(lagrangian,Float64,k)
   
   # FESpaces (P2-P0)
-   #Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:H1)
-   #Qh_ = TestFESpace(model,reffe_p,conformity=:L2)
+   Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:H1)
+   Qh_ = TestFESpace(model,reffe_p,conformity=:L2)
+   Lh_ = ConstantFESpace(model)
 
   # FESpaces (Hood-Taylor)
   #  Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:H1)
   #  Qh_ = TestFESpace(model,reffe_p,conformity=:C0)
 
   # FESpaces (Crouzeix-Raviart)
-   Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:H1)
-   Qh_ = TestFESpace(model,reffe_p,conformity=:L2, constraint=:zeromean)
+   #Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:H1)
+   #Qh_ = TestFESpace(model,reffe_p,conformity=:L2, constraint=:zeromean)
 
   # Define non-conforming velocity space
   # Uh_ = TestFESpace(model, reffe_u, dirichlet_tags="boundary", conformity=:H1)
@@ -191,9 +192,10 @@ function assemble_linear_elasticity(model, k, μ, λ, u_ex, p_ex)
 
   Uh = TrialFESpace(Uh_,u_ex)
   Qh = TrialFESpace(Qh_)
+  Lh = TrialFESpace(Lh_)
 
-  Yh = MultiFieldFESpace([Uh_,Qh_])
-  Xh = MultiFieldFESpace([Uh,Qh])
+  Yh = MultiFieldFESpace([Uh_,Qh_,Lh_])
+  Xh = MultiFieldFESpace([Uh,Qh,Lh])
 
   Ω = Triangulation(model)
   dΩ = Measure(Ω,2*(k+2))
