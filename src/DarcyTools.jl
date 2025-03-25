@@ -83,8 +83,10 @@ end
 
 function compute_errors_darcy(xh, dΩ, κ, u_ex, p_ex)
   uh, ph, _ = xh
-  error_u = sqrt(sum(∫(1.0/κ*(u_ex-uh)⋅(u_ex-uh))*dΩ + ∫((∇⋅(u_ex-uh))*(∇⋅(u_ex-uh)))*dΩ))
-  error_p = sqrt(sum(∫((p_ex-ph)*(p_ex-ph))*dΩ))
+  # error_u = sqrt(sum(∫(1.0/κ*(u_ex-uh)⋅(u_ex-uh))*dΩ + ∫((∇⋅(u_ex-uh))*(∇⋅(u_ex-uh)))*dΩ))
+  error_u = sqrt(sum(∫(1.0/κ*(u_ex-uh)⋅(u_ex-uh))*dΩ + ∫((1.0/κ)*(∇⋅(u_ex-uh))*(∇⋅(u_ex-uh)))*dΩ))
+  # error_p = sqrt(sum(∫((p_ex-ph)*(p_ex-ph))*dΩ))
+  error_p = sqrt(sum(∫(κ*(p_ex-ph)*(p_ex-ph))*dΩ)) 
   error_u,error_p
 end
 
@@ -112,7 +114,7 @@ function assemble_darcy_riesz_mapping_preconditioner_blocks(op, dΩ, dΓ, dΛ,
      #a11_B2(u,v)=∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ
     a11_B2(u,v)=∫((1.0/κ)*u⋅v + (1.0+1.0^2/κ)*(∇⋅u)*(∇⋅v))dΩ
    #  a22a_B2(p,q)= ∫(p*q)dΩ
-    a22a_B2(p,q)=∫((1.0+1.0)*(p*q))dΩ
+    a22a_B2(p,q)=∫((1.0)*(p*q))dΩ
     # a22b_B2(p,q)= ∫(κ*(p*q))dΩ + ∫(κ*(∇(p))⋅∇(q))dΩ + ∫(κ/h_e*jump(p)*jump(q))dΛ + ∫((κ/h_e_Γ)*p*q)dΓ
     a22b_B2(p,q)=∫(1.0*(p*q))dΩ + ∫(κ/1.0*(∇(p))⋅∇(q))dΩ + ∫(κ/1.0*1.0/h_e*jump(p)*jump(q))dΛ + ∫(κ/1.0*1.0/h_e_Γ*p*q)dΓ
     a33_B2(ϕ,ψ) = ∫(ϕ*ψ)dΩ
@@ -173,7 +175,7 @@ function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, u_e
 
   weighted_norm = sqrt(dot(newfreedofs,freedofs))
 
-  return compute_operator_norm(A11,euh), weighted_norm #compute_operator_norm(A22,eph)
+  return compute_operator_norm(A11,euh), weighted_norm #compute_operator_norm(A22,eph),
 
 end
 

@@ -8,7 +8,7 @@ module DarcyConvergenceTests
   const write_solution_to_vtk = false
 
   # Arbitrary model parameters
-  const κ = 1
+  const κ = 0.01
   const ν = 1
   const c0 = 1
 
@@ -31,7 +31,7 @@ module DarcyConvergenceTests
     push!(ru,0.)
     push!(rp,0.)
 
-    nkmax=4
+    nkmax=6
     for nk in 1:nkmax
         println("******** Refinement step: $nk")
         model=generate_model2d(nk)
