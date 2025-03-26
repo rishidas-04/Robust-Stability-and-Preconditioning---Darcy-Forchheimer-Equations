@@ -105,17 +105,17 @@ function assemble_darcy_riesz_mapping_preconditioner_blocks(op, dΩ, dΓ, dΛ,
     # a11_B1(u,v)=∫((1.0/κ)*(u⋅v)+(1.0/κ)*(∇⋅u)*(∇⋅v))dΩ
     a11_B1(u,v)=∫((1.0/κ)*u⋅v + (1.0/κ)*(∇⋅u)*(∇⋅v))dΩ
     # a22_B1(p,q)= ∫(κ*p*q)dΩ
-    a22_B1(p,q)=∫((κ)*(p*q))dΩ
+    a22_B1(p,q)=∫((1.0+κ+κ)*(p*q))dΩ
     a33_B1(ϕ,ψ) = ∫(ϕ*ψ)dΩ
 
     A11,A22,A33 = assemble_matrix(a11_B1,X1,Y1),assemble_matrix(a22_B1,X2,Y2),assemble_matrix(a33_B1,X3,Y3)
     return A11,A22,A33
   else
-     #a11_B2(u,v)=∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ
+    #  a11_B2(u,v)=∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ
     a11_B2(u,v)=∫((1.0/κ)*u⋅v + (1.0+1.0^2/κ)*(∇⋅u)*(∇⋅v))dΩ
    #  a22a_B2(p,q)= ∫(p*q)dΩ
-    a22a_B2(p,q)=∫((1.0)*(p*q))dΩ
-    # a22b_B2(p,q)= ∫(κ*(p*q))dΩ + ∫(κ*(∇(p))⋅∇(q))dΩ + ∫(κ/h_e*jump(p)*jump(q))dΛ + ∫((κ/h_e_Γ)*p*q)dΓ
+    a22a_B2(p,q)=∫((1.0+1.0)*(p*q))dΩ
+    #  a22b_B2(p,q)= ∫(κ*(p*q))dΩ + ∫(κ*(∇(p))⋅∇(q))dΩ + ∫(κ/h_e*jump(p)*jump(q))dΛ + ∫((κ/h_e_Γ)*p*q)dΓ
     a22b_B2(p,q)=∫(1.0*(p*q))dΩ + ∫(κ/1.0*(∇(p))⋅∇(q))dΩ + ∫(κ/1.0*1.0/h_e*jump(p)*jump(q))dΛ + ∫(κ/1.0*1.0/h_e_Γ*p*q)dΓ
     a33_B2(ϕ,ψ) = ∫(ϕ*ψ)dΩ
 

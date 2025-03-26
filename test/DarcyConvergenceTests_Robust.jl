@@ -9,7 +9,7 @@ module RobustDarcyConvergenceTests
   const write_solution_to_vtk = false
 
   # Arbitrary model parameters
-  const κ = 0.000001
+  const κ = 1
   const ν = 1
   const c0 = 1
 
