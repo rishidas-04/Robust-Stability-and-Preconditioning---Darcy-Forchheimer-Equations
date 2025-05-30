@@ -15,6 +15,6 @@ module GridapPertubedSaddlePointPreconditioners
 
     export assemble_perturbed_darcy, assemble_darcy, compute_errors_darcy, compute_errors_perturbed_darcy, compute_operator_norm, compute_errors_robust_darcy, assemble_darcy_riesz_mapping_preconditioner_blocks, assemble_linear_elasticity, compute_errors_linear_elasticity
 
-    export generate_model2d
+    export generate_model2d, setup_model_labels_unit_square!
     export GridapLinearSolverPreconditioner
 end

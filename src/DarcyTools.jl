@@ -7,6 +7,12 @@ function generate_model2d(nk)
   CartesianDiscreteModel(domain, partition) |> simplexify
 end
 
+function setup_model_labels_unit_square!(model)
+  labels = get_face_labeling(model)
+  add_tag!(labels,"Gamma_p",[6,2,3,4,8]) #6top, right, and other 3 corners
+  add_tag!(labels,"Gamma_u",[1,2,3,5,7]) # bottom and 7left and low-left corner
+end  
+
 
 function assemble_perturbed_darcy(model, k, κ, ν, c0, u_ex, p_ex)
    reffe_u = ReferenceFE(raviart_thomas,Float64,k)
