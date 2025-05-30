@@ -8,7 +8,7 @@ module DarcyForchheimerConvergenceTests_mixedBC
   using LinearAlgebra
 
   # Arbitrary model parameters
-  const κ = 0.01
+  const κ = 1
   const r = 3.5
   const FF = 1
 
