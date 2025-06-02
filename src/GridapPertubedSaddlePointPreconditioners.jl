@@ -10,11 +10,10 @@ module GridapPertubedSaddlePointPreconditioners
 
     include("Preconditioners.jl")
     include("DarcyTools.jl")
-    include("ConditionNumberEstimator.jl")
+
      
     export assemble_perturbed_darcy, assemble_darcy, compute_errors_darcy, compute_errors_perturbed_darcy, compute_operator_norm, compute_errors_robust_darcy,  assemble_linear_elasticity, compute_errors_linear_elasticity
 
     export generate_model2d, setup_model_labels_unit_square!
     export GridapLinearSolverPreconditioner
-    export estimate_condition_number_operator
 end

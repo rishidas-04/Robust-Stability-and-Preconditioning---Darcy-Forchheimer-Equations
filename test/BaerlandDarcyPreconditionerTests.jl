@@ -5,20 +5,32 @@ module BaerlandDarcyPreconditionerTests
   using Printf
   using Test
   using Krylov
-  using KrylovKit 
   using LinearAlgebra
   using LinearOperators
 
 
-  # WE want to reproduce the table from Baerland et al.
-
-  # Options
-  const write_solution_to_vtk = false
+  # We want to reproduce the table from Baerland et al.
+  # "A robust preconditioner for the Darcy problem with mixed boundary conditions"
+  # https://doi.org/10.1016/j.camwa.2017.01.001
 
   function assemble_baerland_preconditioner(op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:prec_variant)
     X1,X2,X3 = op.trial
     Y1,Y2,Y3 = op.test 
-  
+
+    N  = num_free_dofs(op.trial)
+    Ns = [num_free_dofs(U) for U in op.trial] 
+    Np = zeros(Int,length(Ns)+1)
+    Np[1]=1
+      for i=2:length(Ns)+1
+          Np[i]=Np[i-1]+Ns[i-1]
+      end
+    Pinv=zeros(N,N); 
+    Adense = Array(op.op.matrix)
+    range1=Np[1]:Np[2]-1
+    range2=Np[2]:Np[3]-1
+    range3=Np[3]:Np[4]-1
+
+
     @assert prec_variant in (:B1,:B2)
     if (prec_variant==:B2)
       a11_B2(u,v) =∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ
@@ -30,6 +42,11 @@ module BaerlandDarcyPreconditionerTests
 
       A22=LinearOperator(GridapLinearSolverPreconditioner(A22a_))+
              LinearOperator(GridapLinearSolverPreconditioner(A22b_))
+
+      A22ainv=inv(Array(A22a_));
+      A22binv=inv(Array(A22b_));  
+
+      Pinv[range2,range2]=A22ainv+A22binv;         
       
     else #THIS IS FOR B1:
       a11_B1(u,v)=∫((1.0/κ)*(u⋅v) + (1.0/κ)*(∇⋅u)*(∇⋅v))dΩ
@@ -38,13 +55,23 @@ module BaerlandDarcyPreconditionerTests
   
       A11_,A22_,A33_ = assemble_matrix(a11_B1,X1,Y1),assemble_matrix(a22_B1,X2,Y2),assemble_matrix(a33_B1,X3,Y3)
       A22=LinearOperator(GridapLinearSolverPreconditioner(A22_)) 
-      
+
+      A22inv=inv(Array(A22_));  
+      Pinv[range2,range2]=A22inv;  
+
     end
+
     A11=LinearOperator(GridapLinearSolverPreconditioner(A11_))
     A33=LinearOperator(GridapLinearSolverPreconditioner(A33_))  
-           
-    return BlockDiagonalOperator(A11,A22,A33)
 
+    A11inv=inv(Array(A11_));  
+    A33inv=inv(Array(A33_));
+    Pinv[range1,range1]=A11inv;   
+    Pinv[range3,range3]=A33inv;
+    evals=eigvals(Pinv*Adense)
+    @printf("condition number of the preconditioned system: %1.3e\n", maximum(broadcast(abs,evals))/minimum(broadcast(abs,evals)))
+
+    return BlockDiagonalOperator(A11,A22,A33)
   end
 
   
@@ -70,9 +97,7 @@ module BaerlandDarcyPreconditionerTests
     (xdofs, stats) = minres(A, b, M=P; itmax=itmax, verbose=1,
                          callback=minres_callback,
                          atol=0.0,
-                         rtol=0.0,
-                         #ratol=0.0,
-                         #rrtol=0.0,
+                         rtol=0.0, 
                          etol=0.0)
     xh=FEFunction(op.trial,xdofs)
 
@@ -88,7 +113,7 @@ module BaerlandDarcyPreconditionerTests
                           sin(π*x[1])*(sin(π*x[2]))^2)
   p_ex(x)  = sin(π*x[1])*cos(π*x[2])
 
-  k=0; κ = 1.E-8; nk = 4
+  k=0; κ = 1.; nk = 3
 
   model=generate_model2d(nk)
   Ω = Triangulation(model)
@@ -100,11 +125,8 @@ module BaerlandDarcyPreconditionerTests
   dΓ = Measure(Γ,2*(k+2)-1)
   h_e_Γ = CellField(get_array(∫(1)dΓ),Γ)
   
-  op  = assemble_darcy(model,k,κ,u_ex,p_ex)
-  P = assemble_baerland_preconditioner(op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B1)
-  xh,state = solve_using_baerland_preconditioner(op,P)
-
-  P_mat = Matrix(P) 
-  println("Estimated condition number: ", estimate_condition_number_operator(op.op.matrix,P_mat))
+  oper  = assemble_darcy(model,k,κ,u_ex,p_ex)
+  riesz = assemble_baerland_preconditioner(oper, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B2)
+  xh,state = solve_using_baerland_preconditioner(oper,riesz)
 
 end
