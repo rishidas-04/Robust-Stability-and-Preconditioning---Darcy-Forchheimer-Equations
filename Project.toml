@@ -4,15 +4,25 @@ authors = ["Rishi Das <drishi0077@gmail.com>", "Ricardo Ruiz Baier <ricardo.ruiz
 version = "1.0.0-DEV"
 
 [deps]
+BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
+GridapDistributed = "f9701e48-63b3-45aa-9a63-9bc6c271f355"
+GridapSolvers = "6d3209ee-5e3c-4db7-a716-942eb12ed534"
 Krylov = "ba0b0d4f-ebba-5204-a429-3ac8c609bfb7"
+KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearOperators = "5c8ed15e-5a4c-59e4-a42b-c7e8811fb125"
+PartitionedArrays = "5a9dfac6-5c52-46f7-8278-5e2210713be9"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [compat]
+BlockArrays = "1.6.3"
 Gridap = "0.18.2"
+GridapDistributed = "0.4.7"
+GridapSolvers = "0.5.0"
 Krylov = "0.9.10"
+KrylovKit = "0.9.5"
+PartitionedArrays = "0.3.4"
 Printf = "1.11.0"
 julia = "1.7"
 
