@@ -77,6 +77,34 @@ function assemble_darcy(model, k, κ, u_ex, p_ex)
  op 
 end
 
+function assemble_darcy_noExact(model, k, κ, f_rhs, g_rhs)
+  reffe_u = ReferenceFE(raviart_thomas,Float64,k)
+  reffe_p = ReferenceFE(lagrangian,Float64,k)
+
+  # FESpaces
+  Uh_ = TestFESpace(model,reffe_u,dirichlet_tags="boundary",conformity=:HDiv)
+  Qh_ = TestFESpace(model,reffe_p,conformity=:L2)
+  Lh_ = ConstantFESpace(model)
+
+  Uh = TrialFESpace(Uh_,VectorValue(0,0))
+  Qh = TrialFESpace(Qh_)
+  Lh = TrialFESpace(Lh_)
+
+  Yh = MultiFieldFESpace([Uh_,Qh_,Lh_])
+  Xh = MultiFieldFESpace([Uh,Qh,Lh])
+
+  Ω = Triangulation(model)
+  dΩ = Measure(Ω,2*(k+2))
+
+  a((u, p, ϕ),(v, q, ψ)) = ∫( (1/κ)*(u⋅v) )*dΩ - ∫(q*(∇⋅u))*dΩ - ∫((∇⋅v)*p)*dΩ + ∫(p*ψ)dΩ + ∫(q*ϕ)dΩ 
+  b((v, q, ψ)) = ∫(f_rhs⋅v)*dΩ - ∫(q*g_rhs)*dΩ
+
+
+  # Build affine FE operator
+  op = AffineFEOperator(a,b,Xh,Yh)
+ op 
+end
+
 function compute_errors_perturbed_darcy(xh, dΩ, u_ex, p_ex)
   uh, ph = xh
   error_u = sqrt(sum(∫((u_ex-uh)⋅(u_ex-uh))*dΩ + ∫((∇⋅(u_ex-uh))*(∇⋅(u_ex-uh)))*dΩ))

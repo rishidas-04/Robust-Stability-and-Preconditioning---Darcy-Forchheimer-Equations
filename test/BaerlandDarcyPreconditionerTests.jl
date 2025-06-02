@@ -35,7 +35,7 @@ module BaerlandDarcyPreconditionerTests
     if (prec_variant==:B2)
       a11_B2(u,v) =∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ
       a22a_B2(p,q)= ∫(p*q)dΩ
-      a22b_B2(p,q)= ∫(κ*(∇(p)⋅∇(q)))dΩ + ∫((κ/h_e)*jump(p)*jump(q))dΛ + ∫((κ/h_e_Γ)*p*q)dΓ
+      a22b_B2(p,q)= ∫(κ*(∇(p))⋅∇(q))dΩ + ∫((κ/h_e)*jump(p)*jump(q))dΛ + ∫((κ/h_e_Γ)*p*q)dΓ
       a33_B2(ϕ,ψ) = ∫(ϕ*ψ)dΩ
   
       A11_,A22a_,A22b_,A33_ = assemble_matrix(a11_B2,X1,Y1),assemble_matrix(a22a_B2,X2,Y2),assemble_matrix(a22b_B2,X2,Y2),assemble_matrix(a33_B2,X3,Y3)
@@ -108,12 +108,13 @@ module BaerlandDarcyPreconditionerTests
     xh, stats, conv_history
   end
 
-  # manufactured solutions
-  u_ex(x)  = VectorValue((sin(π*x[1]))^2*sin(π*x[2]),
-                          sin(π*x[1])*(sin(π*x[2]))^2)
-  p_ex(x)  = sin(π*x[1])*cos(π*x[2])
 
-  k=0; κ = 1.; nk = 3
+
+  k=0; κ = 1.e-3; nk = 3
+
+  # RHS for Darcy
+  f_rhs  = VectorValue(1,1)
+  g_rhs  = 0.0
 
   model=generate_model2d(nk)
   Ω = Triangulation(model)
@@ -125,8 +126,8 @@ module BaerlandDarcyPreconditionerTests
   dΓ = Measure(Γ,2*(k+2)-1)
   h_e_Γ = CellField(get_array(∫(1)dΓ),Γ)
   
-  oper  = assemble_darcy(model,k,κ,u_ex,p_ex)
-  riesz = assemble_baerland_preconditioner(oper, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B2)
+  oper  = assemble_darcy_noExact(model,k,κ,f_rhs,g_rhs)
+  riesz = assemble_baerland_preconditioner(oper, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B1)
   xh,state = solve_using_baerland_preconditioner(oper,riesz)
 
 end
