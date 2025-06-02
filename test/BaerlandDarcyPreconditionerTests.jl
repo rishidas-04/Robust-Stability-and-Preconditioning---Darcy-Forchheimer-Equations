@@ -5,7 +5,7 @@ module BaerlandDarcyPreconditionerTests
   using Printf
   using Test
   using Krylov
-  #using KrylovKit 
+  using KrylovKit 
   using LinearAlgebra
   using LinearOperators
 
@@ -30,20 +30,18 @@ module BaerlandDarcyPreconditionerTests
 
       A22=LinearOperator(GridapLinearSolverPreconditioner(A22a_))+
              LinearOperator(GridapLinearSolverPreconditioner(A22b_))
-
+      
     else #THIS IS FOR B1:
       a11_B1(u,v)=∫((1.0/κ)*(u⋅v) + (1.0/κ)*(∇⋅u)*(∇⋅v))dΩ
       a22_B1(p,q)= ∫(κ*p*q)dΩ
       a33_B1(ϕ,ψ) = ∫(κ*ϕ*ψ)dΩ
   
       A11_,A22_,A33_ = assemble_matrix(a11_B1,X1,Y1),assemble_matrix(a22_B1,X2,Y2),assemble_matrix(a33_B1,X3,Y3)
-
       A22=LinearOperator(GridapLinearSolverPreconditioner(A22_)) 
       
     end
     A11=LinearOperator(GridapLinearSolverPreconditioner(A11_))
     A33=LinearOperator(GridapLinearSolverPreconditioner(A33_))  
-
            
     return BlockDiagonalOperator(A11,A22,A33)
 
@@ -54,7 +52,6 @@ module BaerlandDarcyPreconditionerTests
                                                        rtol=1.0e-6,
                                                        itmax=500, 
                                                        verbose=false)
-
     A=op.op.matrix
     b=op.op.vector
     r=copy(b)
@@ -91,9 +88,6 @@ module BaerlandDarcyPreconditionerTests
                           sin(π*x[1])*(sin(π*x[2]))^2)
   p_ex(x)  = sin(π*x[1])*cos(π*x[2])
 
-
-
-
   k=0; κ = 1.E-8; nk = 4
 
   model=generate_model2d(nk)
@@ -107,11 +101,10 @@ module BaerlandDarcyPreconditionerTests
   h_e_Γ = CellField(get_array(∫(1)dΓ),Γ)
   
   op  = assemble_darcy(model,k,κ,u_ex,p_ex)
-  riesz_map_matrix = assemble_baerland_preconditioner(op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B1)
-  xh,state = solve_using_baerland_preconditioner(op,riesz_map_matrix)
+  P = assemble_baerland_preconditioner(op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B1)
+  xh,state = solve_using_baerland_preconditioner(op,P)
 
-  #P_mat = Matrix(riesz_map_matrix) 
-  #condest = estimate_condition_number_operator(op.op.matrix,riesz_map_matrix)
-  #println("Estimated condition number: ", condest)
+  P_mat = Matrix(P) 
+  println("Estimated condition number: ", estimate_condition_number_operator(op.op.matrix,P_mat))
 
 end
