@@ -110,7 +110,7 @@ module BaerlandDarcyPreconditionerTests
 
 
 
-  k=1; κ = 1.e-3; nk = 3
+  k=0; κ = 1.0E-4; nk = 3
 
   # RHS for Darcy
   f_rhs  = VectorValue(0.1,0)
@@ -127,7 +127,7 @@ module BaerlandDarcyPreconditionerTests
   h_e_Γ = CellField(get_array(∫(1)dΓ),Γ)
   
   oper  = assemble_darcy_noExact(model,k,κ,f_rhs,g_rhs)
-  riesz = assemble_baerland_preconditioner(oper, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B2)
+  riesz = assemble_baerland_preconditioner(oper, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B1)
   xh,state = solve_using_baerland_preconditioner(oper,riesz)
 
 end
