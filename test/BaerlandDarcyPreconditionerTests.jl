@@ -1,5 +1,5 @@
 module BaerlandDarcyPreconditionerTests
-  using GridapPertubedSaddlePointPreconditioners
+  using PertubedSaddlePointPreconditioners
   using Gridap
   import Gridap: ∇
   using Printf

@@ -159,7 +159,7 @@ function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, u_e
   auxr=copy(freedofs)
   rtol=1.0e-14
 
-  function custom_stopping_condition(solver::KrylovSolver, A, b, r, tol)
+  function custom_stopping_condition(solver, A, b, r, tol)
     mul!(r, A, solver.x)
     r .-= b                       # r := b - Ax
     bool = norm(r) ≤ tol*norm(b)  # tolerance based on the 2-norm of the residual
@@ -293,7 +293,7 @@ function compute_errors_robust_linear_elasticity(xh, op, dΩ, dΓ, dΛ, h_e, h_e
   auxr=copy(freedofs)
   rtol=1.0e-14
 
-  function custom_stopping_condition(solver::KrylovSolver, A, b, r, tol)
+  function custom_stopping_condition(solver, A, b, r, tol)
     mul!(r, A, solver.x)
     r .-= b                       # r := b - Ax
     bool = norm(r) ≤ tol*norm(b)  # tolerance based on the 2-norm of the residual

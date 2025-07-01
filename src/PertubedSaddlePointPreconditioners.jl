@@ -1,4 +1,4 @@
-module GridapPertubedSaddlePointPreconditioners
+module PertubedSaddlePointPreconditioners
 
     using Gridap
     using Gridap.ReferenceFEs

@@ -1,6 +1,6 @@
 module DarcyGridapSolvers
 
-using GridapPertubedSaddlePointPreconditioners
+using PertubedSaddlePointPreconditioners
 using Test
 using LinearAlgebra
 using FillArrays, BlockArrays

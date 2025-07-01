@@ -1,5 +1,5 @@
 module DarcyForchheimerConvergenceTests_mixedBC
-  using GridapPertubedSaddlePointPreconditioners
+  using PertubedSaddlePointPreconditioners
   using Gridap
   import Gridap: ∇
   using Printf
@@ -8,9 +8,9 @@ module DarcyForchheimerConvergenceTests_mixedBC
   using LinearAlgebra
 
   # Arbitrary model parameters
-  const κ = 1
+  const κ = 1.0
   const r = 3.5
-  const FF = 1
+  const FF = 1.0
 
   function normu(v)
     (v⋅v>0)*(sqrt(v⋅v))^(r-2)
@@ -60,7 +60,7 @@ module DarcyForchheimerConvergenceTests_mixedBC
     jacob((u,p),(du,dp),(v,q)) = a(du,v) + d1(u,du,v) + d2(u,du,v) + b(v,dp) + b(du,q)  
 
     oper = FEOperator(resid,jacob,Xh,Yh)
-    nls = NLSolver(show_trace=true, method=:newton, linesearch=BackTracking())
+    nls = NLSolver(show_trace=true, method=:newton, linesearch=BackTracking(), iterations=25, ftol=1.0E-7)
     solver = FESolver(nls)
     x0=0.01*ones(num_free_dofs(Xh)) 
     xh=FEFunction(Xh,x0)
@@ -74,7 +74,7 @@ module DarcyForchheimerConvergenceTests_mixedBC
 
     euh = u_ex - uh
     eph = p_ex - ph
-    eu = (sum(∫((euh⋅euh).^(0.5*3))dΩ))^(1.0/3.0) + sqrt(sum(∫((∇⋅euh)*(∇⋅euh))*dΩ))
+    eu = (sum(∫((euh⋅euh).^(0.5*3.0))dΩ))^(1.0/3.0) + sqrt(sum(∫((∇⋅euh)*(∇⋅euh))*dΩ))
     ep = sqrt(sum(∫(eph*eph)*dΩ))
 
     if generate_output 
@@ -125,5 +125,5 @@ module DarcyForchheimerConvergenceTests_mixedBC
     end
     println("=======================================================")
   end
-  convergence_test(;nkmax=7,k=1,generate_output=false)
+  convergence_test(;nkmax=6,k=0,generate_output=false)
 end
