@@ -1,4 +1,4 @@
-module rishiConvergenceTests
+module RishiConvergenceTestsDarcy_weightedNorms
   using PertubedSaddlePointPreconditioners
   using Gridap
   import Gridap: ∇
@@ -23,6 +23,39 @@ module rishiConvergenceTests
     solve(opmin)
   end
 
+  # Assembling the sub-minimization problem
+  function assemble_minimization_problem(model, k, κ, p_min_ex, ph)
+  
+    reffe_p_min = ReferenceFE(lagrangian,Float64,0)
+
+    # FESpaces
+    Qminh_ = TestFESpace(model,reffe_p_min,conformity=:L2)
+    Lminh_ = ConstantFESpace(model)
+
+  
+    Qminh = TrialFESpace(Qminh_,p_min_ex)
+    Lminh = TrialFESpace(Lminh_)
+
+    Yminh = MultiFieldFESpace([Qminh_,Lminh_])
+    Xminh = MultiFieldFESpace([Qminh,Lminh])
+
+    Ω1 = Triangulation(model)
+    # dΩ = Measure(Ω,2*(k+2))
+    dΩ1 = Measure(Ω1,4)
+    Γ = BoundaryTriangulation(model)
+    n_Γ = get_normal_vector(Γ)
+    # dΓ = Measure(Γ,2*(k+2)-1)
+    dΓ = Measure(Γ,3)
+
+
+    amin((p, ϕ),(q, ψ)) = ∫( p*q ) * dΩ1 + ∫(κ*∇(p)⋅∇(q))*dΩ1 + ∫(p*ψ) * dΩ1 + ∫(q*ϕ) * dΩ1 
+    bmin((q, ψ)) = ∫( (p_ex - ph)*q ) * dΩ1 + ∫((p_ex - ph)*ψ) * dΩ1 
+
+    # Build affine FE operator
+    opmin = AffineFEOperator(amin,bmin,Xminh,Yminh)
+    opmin, dΩ1, dΓ
+  end
+
   for k in 0:0
     eu = Float64[]
     ep = Float64[]
@@ -41,46 +74,13 @@ module rishiConvergenceTests
     for nk in 1:nkmax
         println("******** Refinement step: $nk")
         model=generate_model2d(nk)
-        op,dΩ,_=assemble_darcy(model, k, κ, u_ex, p_ex)
+        op = assemble_darcy(model, k, κ, u_ex, p_ex)
+        dΩ = Measure(Triangulation(model), 2*(k+2))
         xh=solve_darcy(op)
         uh, ph, _ = xh
         ndofs=num_free_dofs(Gridap.FESpaces.get_fe_space(xh))
 
-        
-# Assembling the sub-minimization problem
-function assemble_minimization_problem(model, k, κ, p_min_ex)
-  
-  reffe_p_min = ReferenceFE(lagrangian,Float64,0)
-
-  # FESpaces
-  Qminh_ = TestFESpace(model,reffe_p_min,conformity=:L2)
-  Lminh_ = ConstantFESpace(model)
-
-  
-  Qminh = TrialFESpace(Qminh_,p_min_ex)
-  Lminh = TrialFESpace(Lminh_)
-
-  Yminh = MultiFieldFESpace([Qminh_,Lminh_])
-  Xminh = MultiFieldFESpace([Qminh,Lminh])
-
-  Ω1 = Triangulation(model)
-  # dΩ = Measure(Ω,2*(k+2))
-  dΩ1 = Measure(Ω1,4)
-  Γ = BoundaryTriangulation(model)
-  n_Γ = get_normal_vector(Γ)
-  # dΓ = Measure(Γ,2*(k+2)-1)
-  dΓ = Measure(Γ,3)
-
-
-  amin((p, ϕ),(q, ψ)) = ∫( p*q ) * dΩ1 + ∫(κ*∇(p)⋅∇(q))*dΩ1 + ∫(p*ψ) * dΩ1 + ∫(q*ϕ) * dΩ1 
-  bmin((q, ψ)) = ∫( (p_ex - ph)*q ) * dΩ1 + ∫((p_ex - ph)*ψ) * dΩ1 
-
-  # Build affine FE operator
-  opmin = AffineFEOperator(amin,bmin,Xminh,Yminh)
-  opmin, dΩ1, dΓ
-end
-
-        opmin,dΩ1,_=assemble_minimization_problem(model, k, κ, p_min_ex)
+        opmin,dΩ1,_=assemble_minimization_problem(model, k, κ, p_min_ex, ph)
         yh=solve_minimization_problem(opmin)
         pminh, _ = yh
 
@@ -89,7 +89,6 @@ end
           writevtk(Ω, "convergence_results_$nk",
                   cellfields=["uh"=>uh, "ph"=>ph])
         end
-
 
         error_u,error_p,error_pmin =
         computation_error_darcy_minimization(xh, op, yh, opmin, dΩ, dΩ1, κ, u_ex, p_ex, p_min_ex)
