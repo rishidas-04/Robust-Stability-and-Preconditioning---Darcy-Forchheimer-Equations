@@ -1,3 +1,13 @@
+# Computation of error using the minimization sub-problem
+function computation_error_darcy_minimization(xh, op, yh, opmin, dΩ, dΩ1, κ, u_ex, p_ex, p_min_ex)
+    uh, ph, _ = xh
+    pminh, _ = yh
+ 
+    error_u = sqrt(sum(∫(1.0/κ*(u_ex-uh)⋅(u_ex-uh))*dΩ + ∫((∇⋅(u_ex-uh))*(∇⋅(u_ex-uh)))*dΩ))
+    error_p = sqrt(sum(∫((p_ex-ph-pminh)*(p_ex-ph-pminh))*dΩ + ∫(κ*((∇(pminh))⋅(∇(pminh))))*dΩ))
+    error_pmin = sqrt(sum(∫((p_min_ex-pminh)*(p_min_ex-pminh))*dΩ1 + ∫(κ*(∇(p_min_ex-pminh))⋅(∇(p_min_ex-pminh)))*dΩ1))
+    return error_u, error_p, error_pmin
+end
 
 function generate_model2d(nk)
   domain =(0,1,0,1)

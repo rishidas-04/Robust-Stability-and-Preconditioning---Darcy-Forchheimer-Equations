@@ -8,9 +8,9 @@ module DarcyForchheimerConvergenceTests_mixedBC
   using LinearAlgebra
 
   # Arbitrary model parameters
-  const κ = 1.0
-  const r = 3.5
-  const FF = 1.0
+  const κ = 1.0E-10 # permeability
+  const r = 4.0 # Forchheimer exponent
+  const FF = 1.0E4  # Forchheimer coefficient
 
   function normu(v)
     (v⋅v>0)*(sqrt(v⋅v))^(r-2)
@@ -66,6 +66,7 @@ module DarcyForchheimerConvergenceTests_mixedBC
     xh=FEFunction(Xh,x0)
     (uh,ph), _ = solve!(xh,solver,oper)
 
+
     pa(p,q) = ∫(p*q)*dΩ
     pdivl(q) = ∫(q*(∇⋅uh - g_ex))*dΩ
     projection = AffineFEOperator(pa,pdivl,Qh,Qh)
@@ -93,6 +94,7 @@ module DarcyForchheimerConvergenceTests_mixedBC
     hh = Float64[]
     losses_divh = Float64[]
     nn = Int[]
+    newton_iters = Int[]
 
     push!(ru,0.)
     push!(rp,0.)
@@ -125,5 +127,5 @@ module DarcyForchheimerConvergenceTests_mixedBC
     end
     println("=======================================================")
   end
-  convergence_test(;nkmax=6,k=0,generate_output=false)
+  convergence_test(;nkmax=7,k=1,generate_output=false)
 end
