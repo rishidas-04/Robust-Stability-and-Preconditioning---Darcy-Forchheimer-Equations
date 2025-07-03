@@ -17,10 +17,25 @@ function generate_model2d(nk)
   CartesianDiscreteModel(domain, partition) |> simplexify
 end
 
+function generate_rectangle(nk)
+  domain =(0,2,0,1)
+  n      = 2^nk + 1
+  # Discrete model
+  partition = (2*n,n)
+  CartesianDiscreteModel(domain, partition) |> simplexify
+end
+
 function setup_model_labels_unit_square!(model)
   labels = get_face_labeling(model)
   add_tag!(labels,"Gamma_p",[6,2,3,4,8]) #6top, right, and other 3 corners
   add_tag!(labels,"Gamma_u",[1,2,3,5,7]) # bottom and 7left and low-left corner
+end  
+
+function setup_model_labels_rectangle_channel!(model)
+  labels = get_face_labeling(model)
+  add_tag!(labels,"Gamma_out",[8]) #right 
+  add_tag!(labels,"Gamma_in",[7,1,3]) # left and 2 corners
+  add_tag!(labels,"Gamma_topbot",[1,2,3,4,5,6]) # corners bottom and top
 end  
 
 

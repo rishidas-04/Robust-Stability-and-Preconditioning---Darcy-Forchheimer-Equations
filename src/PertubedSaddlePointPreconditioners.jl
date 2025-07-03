@@ -12,6 +12,6 @@ module PertubedSaddlePointPreconditioners
     include("DarcyTools.jl")
 
     export assemble_perturbed_darcy, assemble_darcy, assemble_darcy_noExact, compute_errors_darcy, compute_errors_perturbed_darcy, compute_operator_norm, compute_errors_robust_darcy,  assemble_linear_elasticity, compute_errors_linear_elasticity
-    export generate_model2d, setup_model_labels_unit_square!, computation_error_darcy_minimization
+    export generate_model2d, generate_rectangle, setup_model_labels_rectangle_channel!,setup_model_labels_unit_square!, computation_error_darcy_minimization
     export GridapLinearSolverPreconditioner
 end
