@@ -143,5 +143,5 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     end
     println("=======================================================")
   end
-  convergence_test(;nkmax=7,k=0,generate_output=false)
+  convergence_test(;nkmax=7,k=1,generate_output=false)
 end
