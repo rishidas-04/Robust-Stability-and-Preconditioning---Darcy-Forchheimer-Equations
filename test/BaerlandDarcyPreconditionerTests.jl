@@ -1,7 +1,9 @@
+
 module BaerlandDarcyPreconditionerTests
   using PertubedSaddlePointPreconditioners
   using Gridap
   import Gridap: ∇
+  using Gridap.Algebra
   using Printf
   using Test
   using Krylov
@@ -12,6 +14,7 @@ module BaerlandDarcyPreconditionerTests
   # We want to reproduce the table from Baerland et al.
   # "A robust preconditioner for the Darcy problem with mixed boundary conditions"
   # https://doi.org/10.1016/j.camwa.2017.01.001
+
 
   function assemble_baerland_preconditioner(op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:prec_variant)
     X1,X2,X3 = op.trial
@@ -36,7 +39,7 @@ module BaerlandDarcyPreconditionerTests
       a11_B2(u,v) =∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ
       a22a_B2(p,q)= ∫(p*q)dΩ
       a22b_B2(p,q)= ∫(κ*(∇(p))⋅∇(q))dΩ + ∫((κ/h_e)*jump(p)*jump(q))dΛ + ∫((κ/h_e_Γ)*p*q)dΓ
-      a33_B2(ϕ,ψ) = ∫(ϕ*ψ)dΩ
+      a33_B2(ϕ,ψ) = ∫(ϵ*ϕ*ψ)dΩ #multiplied by ϵ 
   
       A11_,A22a_,A22b_,A33_ = assemble_matrix(a11_B2,X1,Y1),assemble_matrix(a22a_B2,X2,Y2),assemble_matrix(a22b_B2,X2,Y2),assemble_matrix(a33_B2,X3,Y3)
 
@@ -48,10 +51,10 @@ module BaerlandDarcyPreconditionerTests
 
       Pinv[range2,range2]=A22ainv+A22binv;         
       
-    else #THIS IS FOR B1:
+    else #For B1
       a11_B1(u,v)=∫((1.0/κ)*(u⋅v) + (1.0/κ)*(∇⋅u)*(∇⋅v))dΩ
       a22_B1(p,q)= ∫(κ*p*q)dΩ
-      a33_B1(ϕ,ψ) = ∫(κ*ϕ*ψ)dΩ
+      a33_B1(ϕ,ψ) = ∫(ϵ*ϕ*ψ)dΩ #multiplied by ϵ 
   
       A11_,A22_,A33_ = assemble_matrix(a11_B1,X1,Y1),assemble_matrix(a22_B1,X2,Y2),assemble_matrix(a33_B1,X3,Y3)
       A22=LinearOperator(GridapLinearSolverPreconditioner(A22_)) 
@@ -83,7 +86,7 @@ module BaerlandDarcyPreconditionerTests
     b=op.op.vector
     r=copy(b)
     conv_history = Float64[]
-    function custom_stopping_condition(solver::KrylovSolver, A, b, r, tol)
+    function custom_stopping_condition(solver, A, b, r, tol)
       mul!(r, A, solver.x)
       r .-= b                       # r := b - Ax
       bool = norm(r) ≤ tol*norm(b)  # tolerance based on the 2-norm of the residual
@@ -108,9 +111,8 @@ module BaerlandDarcyPreconditionerTests
     xh, stats, conv_history
   end
 
-
-
-  k=0; κ = 1.0E-4; nk = 3
+  k=0; κ = 1e-8; nk = 3
+  ϵ = 1.0/κ
 
   # RHS for Darcy
   f_rhs  = VectorValue(0.1,0)
@@ -127,7 +129,7 @@ module BaerlandDarcyPreconditionerTests
   h_e_Γ = CellField(get_array(∫(1)dΓ),Γ)
   
   oper  = assemble_darcy_noExact(model,k,κ,f_rhs,g_rhs)
-  riesz = assemble_baerland_preconditioner(oper, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B1)
+  riesz = assemble_baerland_preconditioner(oper, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B2)
   xh,state = solve_using_baerland_preconditioner(oper,riesz)
 
 end

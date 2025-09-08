@@ -11,7 +11,7 @@ end
 
 function generate_model2d(nk)
   domain =(0,1,0,1)
-  n      = 2^nk + 1
+  n      = 2^nk #+ 1
   # Discrete model
   partition = (n,n)
   CartesianDiscreteModel(domain, partition) |> simplexify
@@ -154,6 +154,29 @@ end
 
 
 
+function assemble_darcy_riesz_mapping_preconditioner_blocks(op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:prec_variant)
+  X1,X2,X3 = op.trial
+  Y1,Y2,Y3 = op.test 
+
+  @assert prec_variant in (:B1,:B2)
+  if (prec_variant==:B1)
+    a11_B1(u,v)=∫((1.0/κ)*(u⋅v) + (1.0/κ)*(∇⋅u)*(∇⋅v))dΩ
+    a22_B1(p,q)= ∫(κ*p*q)dΩ
+    a33_B1(ϕ,ψ) = ∫(1.0/κ*ϕ*ψ)dΩ
+
+    A11,A22,A33 = assemble_matrix(a11_B1,X1,Y1),assemble_matrix(a22_B1,X2,Y2),assemble_matrix(a33_B1,X3,Y3)
+    return A11,A22,A33
+  else
+    a11_B2(u,v) =∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ
+      a22a_B2(p,q)= ∫(p*q)dΩ
+      a22b_B2(p,q)= ∫(κ*(∇(p))⋅∇(q))dΩ + ∫((κ/h_e)*jump(p)*jump(q))dΛ + ∫((κ/h_e_Γ)*p*q)dΓ
+      a33_B2(ϕ,ψ) = ∫(1.0/κ*ϕ*ψ)dΩ
+
+    A11,A22a,A22b,A33 = assemble_matrix(a11_B2,X1,Y1),assemble_matrix(a22a_B2,X2,Y2),assemble_matrix(a22b_B2,X2,Y2),assemble_matrix(a33_B2,X3,Y3)
+    return A11,A22a,A22b,A33
+  end
+end
+
 function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, u_ex, p_ex)
 
   blocks=assemble_darcy_riesz_mapping_preconditioner_blocks(op, dΩ, dΓ, dΛ,
@@ -182,7 +205,7 @@ function compute_errors_robust_darcy(xh, op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, u_e
   newfreedofs = zeros(length(freedofs))
   auxM = A22_inv
   auxr=copy(freedofs)
-  rtol=1.0e-14
+  rtol=1.0e-18
 
   function custom_stopping_condition(solver, A, b, r, tol)
     mul!(r, A, solver.x)
