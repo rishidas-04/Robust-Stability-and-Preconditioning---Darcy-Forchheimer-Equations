@@ -138,7 +138,7 @@ function normu(v)
     (v⋅v>0)*(sqrt(v⋅v))^(3-2)
   end
   # FESpaces
-  Uh_ = TestFESpace(model,reffe_u,conformity=:HDiv)#,dirichlet_tags="boundary")
+  Uh_ = TestFESpace(model,reffe_u,dirichlet_tags = "Gamma_u",conformity=:HDiv)#,dirichlet_tags="boundary")
   Qh_ = TestFESpace(model,reffe_p,conformity=:L2)
   
   Uh = TrialFESpace(Uh_,VectorValue(0,0))
@@ -149,7 +149,7 @@ function normu(v)
 
   Ω = Triangulation(model)
   dΩ = Measure(Ω,2*(k+2))
-  Γ = BoundaryTriangulation(model)
+  Γ = BoundaryTriangulation(model, tags = "Gamma_p")
   n_Γ = get_normal_vector(Γ)
   dΓ = Measure(Γ,2*(k+2)-1)
 

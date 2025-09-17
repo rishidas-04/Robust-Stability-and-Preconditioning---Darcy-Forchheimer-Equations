@@ -120,7 +120,7 @@ module BaerlandDarcyForchheimerPreconditionerTests
     xh, stats, conv_history
   end
 
-k=0; κ = 1e-4; nk = 3; FF = 1e6
+k=0; κ = 1e-8; nk = 5; FF = 1e8
 #   ϵ = 1.0/κ
 ϵ = κ/(1+κ*FF)
 
@@ -129,12 +129,13 @@ k=0; κ = 1e-4; nk = 3; FF = 1e6
   g_rhs  = 0.0
 
   model=generate_model2d(nk)
+  setup_model_labels_unit_square!(model)
   Ω = Triangulation(model)
   dΩ = Measure(Ω,2*(k+2))
   Λ = SkeletonTriangulation(model)
   dΛ = Measure(Λ,2*(k+2)-1)
   h_e = CellField(get_array(∫(1)dΛ),Λ)
-  Γ = BoundaryTriangulation(model)
+  Γ = BoundaryTriangulation(model, tags = "Gamma_p")
   dΓ = Measure(Γ,2*(k+2)-1)
   h_e_Γ = CellField(get_array(∫(1)dΓ),Γ)
   
