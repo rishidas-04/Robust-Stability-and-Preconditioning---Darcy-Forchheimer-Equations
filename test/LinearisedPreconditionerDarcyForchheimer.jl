@@ -11,12 +11,19 @@ module BaerlandDarcyForchheimerPreconditionerTests
   using LinearOperators
 #   using IterativeSolvers
 
-
-  function normu(v)
-    (v⋅v>0)*(sqrt(v⋅v))^(3-2)
+function normu(v)
+    (v⋅v>0)*(sqrt(v⋅v))^(3-2) #r = 3
   end
 
-  function assemble_baerland_preconditioner(op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:prec_variant)
+  function deri(v) #derivative of |v| wrt v
+    (v⋅v>0)*(3-2)*(sqrt(v⋅v))^(3-4)*v   # r = 3
+  end
+
+  u_ex(x)  = VectorValue(cos(π*x[1])*sin(π*x[2]),
+                          -sin(π*x[1])*cos(π*x[2]))
+  p_ex(x)  = sin(π*x[1])*cos(π*x[2])
+
+  function assemble_baerland_preconditioner(op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, FF, u_ex, p_ex; prec_variant=:prec_variant)
     X1,X2 = op.trial
     Y1,Y2 = op.test
 
@@ -32,13 +39,13 @@ module BaerlandDarcyForchheimerPreconditionerTests
     Adense = Array(op.op.matrix)
     range1=Np[1]:Np[2]-1
     range2=Np[2]:Np[3]-1
-   
+    
     @assert prec_variant in (:B1,:B2)
     if (prec_variant==:B2)
-      a11_B2(u,v) =∫((1.0/κ + FF)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ #+ ∫(FF*v⋅((normu∘(u))*u))dΩ
+      
+      a11_B2(u,v) =∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ + ∫(FF*v⋅((normu∘(u_ex))*u))dΩ
       a22a_B2(p,q)= ∫(p*q)dΩ
-      a22b_B2(p,q)= ∫(ϵ*(∇(p))⋅∇(q))dΩ + ∫((ϵ/h_e)*jump(p)*jump(q))dΛ + ∫((ϵ/h_e_Γ)*p*q)dΓ
-  
+      a22b_B2(p,q)= ∫((x -> κ / (1 + κ*FF*normu(u_ex(x))))*(∇(p))⋅∇(q))dΩ + ∫(((x -> κ / (1 + κ*FF*normu(u_ex(x))))/h_e)*jump(p)*jump(q))dΛ + ∫(((x -> κ / (1 + κ*FF*normu(u_ex(x))))/h_e_Γ)*p*q)dΓ
      A11_,A22a_,A22b_ = assemble_matrix(a11_B2,X1,Y1),assemble_matrix(a22a_B2,X2,Y2),assemble_matrix(a22b_B2,X2,Y2)#,assemble_matrix(a33_B2,X3,Y3)
      A22=LinearOperator(GridapLinearSolverPreconditioner(A22a_))+
              LinearOperator(GridapLinearSolverPreconditioner(A22b_))
@@ -49,8 +56,8 @@ module BaerlandDarcyForchheimerPreconditionerTests
     Pinv[range2,range2]=A22ainv+A22binv;         
     
     else #For B1
-      a11_B1(u,v)=∫((1.0/κ + FF)*(u⋅v) + (1.0/κ + FF)*(∇⋅u)*(∇⋅v))dΩ #+ ∫(FF*v⋅((normu∘(u))*u))dΩ
-      a22_B1(p,q)= ∫(ϵ*p*q)dΩ
+      a11_B1(u,v)=∫((1.0/κ)*(u⋅v) + (x ->  (1 + κ*FF*normu(u_ex(x))) / κ)*(∇⋅u)*(∇⋅v))dΩ + ∫(FF*v⋅((normu∘(u_ex))*u))dΩ
+      a22_B1(p,q)= ∫((x -> κ / (1 + κ*FF*normu(u_ex(x))))*p*q)dΩ
     
      A11_,A22_= assemble_matrix(a11_B1,X1,Y1),assemble_matrix(a22_B1,X2,Y2)  
     A22=LinearOperator(GridapLinearSolverPreconditioner(A22_)) 
@@ -120,9 +127,9 @@ module BaerlandDarcyForchheimerPreconditionerTests
     xh, stats, conv_history
   end
 
-k=0; κ = 1e-8; nk = 5; FF = 1e8
-#   ϵ = 1.0/κ
-ϵ = κ/(1+κ*FF)
+k=0; κ = 1e-0; nk = 2; FF = 1e0
+    #  ϵ = 1.0/κ
+#  ϵ(x) = (κ/(1+κ*FF*(normu∘(u_ex(x)))))
 
   # RHS for Darcy
   f_rhs  = VectorValue(0.1,0)
@@ -141,7 +148,7 @@ k=0; κ = 1e-8; nk = 5; FF = 1e8
   
   
   oper  = assemble_darcy_forchheimer_noExact(model, k, κ, FF, f_rhs, g_rhs)
-  riesz = assemble_baerland_preconditioner(oper, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ; prec_variant=:B2)
+  riesz = assemble_baerland_preconditioner(oper, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, FF, u_ex, p_ex; prec_variant=:B2)
   xh,state = solve_using_baerland_preconditioner(oper,riesz)
 
   
