@@ -12,20 +12,39 @@ module BaerlandDarcyForchheimerPreconditionerTests
 #   using IterativeSolvers
 
 function normu(v)
-    (v⋅v>0)*(sqrt(v⋅v))^(3-2) #r = 3
+    (v⋅v>0)*(sqrt(v⋅v))^(r-2) 
   end
 
   function deri(v) #derivative of |v| wrt v
-    (v⋅v>0)*(3-2)*(sqrt(v⋅v))^(3-4)*v   # r = 3
+    (v⋅v>0)*(r-2)*(sqrt(v⋅v))^(r-4)*v   
   end
+ const r = 4
+  # u_ex(x)  = VectorValue(cos(π*x[1])*sin(π*x[2]),
+  #                         -sin(π*x[1])*cos(π*x[2]))
+  # p_ex(x)  = sin(π*x[1])*cos(π*x[2])
 
-  u_ex(x)  = VectorValue(cos(π*x[1])*sin(π*x[2]),
-                          -sin(π*x[1])*cos(π*x[2]))
-  p_ex(x)  = sin(π*x[1])*cos(π*x[2])
+  u_ex(x)  = VectorValue(1.0, 1.0)    # manufactured solutions
+  p_ex(x)  = x[1]*x[2]
+
+  Minv = TensorValue(0.25,0.25,0.25,0.25) # Proper inverse can't be taken, as, the matrix [u_ex * transpose(u_ex)] has determinant = zero. Pseudo inverse has been considered : (1/4)*[u_ex * transpose(u_ex)].
 
   function assemble_baerland_preconditioner(op, dΩ, dΓ, dΛ, h_e, h_e_Γ, κ, FF, u_ex, p_ex; prec_variant=:prec_variant)
     X1,X2 = op.trial
     Y1,Y2 = op.test
+
+  Ω = Triangulation(model)
+  dΩ = Measure(Ω,2*(k+2))
+  Γ = BoundaryTriangulation(model, tags = "Gamma_p")
+  n_Γ = get_normal_vector(Γ)
+  dΓ = Measure(Γ,2*(k+2)-1)
+  Λ = SkeletonTriangulation(model)
+  n_Λ = get_normal_vector(Λ)
+  dΛ = Measure(Λ,2*(k+2)-1)
+  h_e = CellField(get_array(∫(1)dΛ),Λ)
+  Γ = BoundaryTriangulation(model)
+  dΓ = Measure(Γ,2*(k+2)-1)
+  h_e_Γ = CellField(get_array(∫(1)dΓ),Γ)
+
 
     N  = num_free_dofs(op.trial)
     Ns = [num_free_dofs(U) for U in op.trial] 
@@ -42,10 +61,24 @@ function normu(v)
     
     @assert prec_variant in (:B1,:B2)
     if (prec_variant==:B2)
+    
+      # a11_B2 is the bilinear form corresponding to the velocity blobk in the preconditioner (5.5).
+    a11_B2(u,v) =∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ + (FF)*∫((x -> (normu(u_ex(x)))^(r-2))*(v⋅u))dΩ + (FF)*(r-2)*∫((x -> (normu(u_ex(x)))^(r-4)) * (u_ex ⋅ u)  * (u_ex ⋅ v))dΩ
+      # a22a_B2 is the bilinear gorm corresponding to the 1st part of the bilinear form : (I)^{-1}
+    a22a_B2(p,q)= ∫(p*q)dΩ
+      # a22_B2_1 corresponds to (-κΔ)^{-1}
+    a22_B2_1(p,q) = ∫(κ*(∇(p))⋅∇(q))dΩ + ∫((κ/h_e)*jump(p)*jump(q))dΛ + ∫((κ/h_e_Γ)*p*q)dΓ
+      # a22_B2_2 corresponds to (-F*norm(u_ex)^{r-2}Δ)^{-1}
+    a22_B2_2(p,q) = (1/FF)*∫((x -> normu(u_ex(x))^(2-r))*(∇(p)⋅∇(q)))dΩ  + (1/FF)*∫(((x -> normu(u_ex(x))^(2-r))/h_e)*jump(p)*jump(q))dΛ  + (1/FF)*∫(((x -> normu(u_ex(x))^(2-r))/h_e_Γ)*p*q)dΓ
+      # a22_B2_3 corresponds to (-[div(A∇)])^{-1}, where A = F*(r-2)*norm(u_ex)^{r-4}
+    a22_B2_3(p,q) = (1/FF)*(1/(r-2))*∫((x -> normu(u_ex(x))^(4-r))*((Minv⋅(∇(p))) ⋅ ∇(q)) )dΩ - (1/FF)*(1/(r-2))*∫((x -> normu(u_ex(x))^(4-r))*((mean((Minv ⋅ ∇(p)))) ⋅ jump(q*n_Λ)) )dΛ + (1/FF)*(1/(r-2))*∫((x -> normu(u_ex(x))^(4-r))*((mean((Minv ⋅ ∇(q)))) ⋅ jump(p*n_Λ)) )dΛ + ∫(jump(p)*jump(q))dΛ #+ (1/FF)*(1/(r-2))*∫(jump(Minv ⋅ ∇(p) ⋅ n_Γ)*jump(Minv ⋅ ∇(q) ⋅n_Γ))dΓ
+    
+    a22b_B2(p,q) = a22_B2_1(p,q) + a22_B2_2(p,q) + a22_B2_3(p,q)
+     
       
-      a11_B2(u,v) =∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ + ∫(FF*v⋅((normu∘(u_ex))*u))dΩ
-      a22a_B2(p,q)= ∫(p*q)dΩ
-      a22b_B2(p,q)= ∫((x -> κ / (1 + κ*FF*normu(u_ex(x))))*(∇(p))⋅∇(q))dΩ + ∫(((x -> κ / (1 + κ*FF*normu(u_ex(x))))/h_e)*jump(p)*jump(q))dΛ + ∫(((x -> κ / (1 + κ*FF*normu(u_ex(x))))/h_e_Γ)*p*q)dΓ
+      # a11_B2(u,v) =∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ + ∫(FF*v⋅((normu∘(u_ex))*u))dΩ
+      # a22a_B2(p,q)= ∫(p*q)dΩ
+      # a22b_B2(p,q)= ∫((x -> κ / (1 + κ*FF*normu(u_ex(x))))*(∇(p))⋅∇(q))dΩ + ∫(((x -> κ / (1 + κ*FF*normu(u_ex(x))))/h_e)*jump(p)*jump(q))dΛ + ∫(((x -> κ / (1 + κ*FF*normu(u_ex(x))))/h_e_Γ)*p*q)dΓ
      A11_,A22a_,A22b_ = assemble_matrix(a11_B2,X1,Y1),assemble_matrix(a22a_B2,X2,Y2),assemble_matrix(a22b_B2,X2,Y2)#,assemble_matrix(a33_B2,X3,Y3)
      A22=LinearOperator(GridapLinearSolverPreconditioner(A22a_))+
              LinearOperator(GridapLinearSolverPreconditioner(A22b_))

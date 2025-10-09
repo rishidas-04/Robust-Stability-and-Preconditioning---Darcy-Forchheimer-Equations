@@ -177,10 +177,23 @@ function assemble_darcy_forchheimer_riesz_mapping_preconditioner_blocks(op, dΩ,
     A11,A22 = assemble_matrix(a11_B1,X1,Y1),assemble_matrix(a22_B1,X2,Y2)
     
   else
-    a11_B2(u,v) =∫((1.0/κ + FF)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ #+ ∫(FF*v⋅((normu∘(u))*u))dΩ
-      a22a_B2(p,q)= ∫(p*q)dΩ
-      a22b_B2(p,q)= ∫((1.0/(1.0/κ + FF))*(∇(p))⋅∇(q))dΩ + ∫(((1.0/(1.0/κ + FF))/h_e)*jump(p)*jump(q))dΛ + ∫(((1.0/(1.0/κ + FF))/h_e_Γ)*p*q)dΓ
+    # a11_B2(u,v) =∫((1.0/κ + FF)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ #+ ∫(FF*v⋅((normu∘(u))*u))dΩ
+    #   a22a_B2(p,q)= ∫(p*q)dΩ
+    #   a22b_B2(p,q)= ∫((1.0/(1.0/κ + FF))*(∇(p))⋅∇(q))dΩ + ∫(((1.0/(1.0/κ + FF))/h_e)*jump(p)*jump(q))dΛ + ∫(((1.0/(1.0/κ + FF))/h_e_Γ)*p*q)dΓ
 
+      # a11_B2 is the bilinear form corresponding to the velocity blobk in the preconditioner (5.5).
+    a11_B2(u,v) =∫((1.0/κ)*(u⋅v)+(∇⋅u)*(∇⋅v))dΩ + (FF)*∫((x -> (normu(u_ex(x)))^(r-2))*(v⋅u))dΩ + (FF)*(r-2)*∫((x -> (normu(u_ex(x)))^(r-4)) * (u_ex ⋅ u)  * (u_ex ⋅ v))dΩ
+      # a22a_B2 is the bilinear gorm corresponding to the 1st part of the bilinear form : (I)^{-1}
+    a22a_B2(p,q)= ∫(p*q)dΩ
+      # a22_B2_1 corresponds to (-κΔ)^{-1}
+    a22_B2_1(p,q) = ∫(κ*(∇(p))⋅∇(q))dΩ + ∫((κ/h_e)*jump(p)*jump(q))dΛ + ∫((κ/h_e_Γ)*p*q)dΓ
+      # a22_B2_2 corresponds to (-F*norm(u_ex)^{r-2}Δ)^{-1}
+    a22_B2_2(p,q) = (1/FF)*∫((x -> normu(u_ex(x))^(2-r))*(∇(p)⋅∇(q)))dΩ  + (1/FF)*∫(((x -> normu(u_ex(x))^(2-r))/h_e)*jump(p)*jump(q))dΛ  + (1/FF)*∫(((x -> normu(u_ex(x))^(2-r))/h_e_Γ)*p*q)dΓ
+      # a22_B2_3 corresponds to (-[div(A∇)])^{-1}, where A = F*(r-2)*norm(u_ex)^{r-4}
+    a22_B2_3(p,q) = (1/FF)*(1/(r-2))*∫((x -> normu(u_ex(x))^(4-r))*((Minv⋅(∇(p))) ⋅ ∇(q)) )dΩ - (1/FF)*(1/(r-2))*∫((x -> normu(u_ex(x))^(4-r))*((mean((Minv ⋅ ∇(p)))) ⋅ jump(q*n_Λ)) )dΛ + (1/FF)*(1/(r-2))*∫((x -> normu(u_ex(x))^(4-r))*((mean((Minv ⋅ ∇(q)))) ⋅ jump(p*n_Λ)) )dΛ + ∫(jump(p)*jump(q))dΛ #+ (1/FF)*(1/(r-2))*∫(jump(Minv ⋅ ∇(p) ⋅ n_Γ)*jump(Minv ⋅ ∇(q) ⋅n_Γ))dΓ
+    
+    a22b_B2(p,q) = a22_B2_1(p,q) + a22_B2_2(p,q) + a22_B2_3(p,q)
+     
     A11,A22a,A22b = assemble_matrix(a11_B2,X1,Y1),assemble_matrix(a22a_B2,X2,Y2),assemble_matrix(a22b_B2,X2,Y2)
     return A11,A22a,A22b
   end
