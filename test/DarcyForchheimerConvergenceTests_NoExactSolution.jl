@@ -13,7 +13,7 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
   # Arbitrary model parameters
   const κ0 = 1.0E-8 # permeability
   const r  = 4.0 # Forchheimer exponent
-  const FF = 1.0 # Forchheimer coefficient
+  const FF = 1.0e5 # Forchheimer coefficient
 
   function normu(v)
     (v⋅v>0)*(sqrt(v⋅v))^(r-2)
@@ -28,9 +28,7 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
   weight_kinvpFF(x) = 1.0/(κinv(x)+FF)
   weight = x->(κ(x)+FF^(-1))
 
-
   f_ex = VectorValue(0,0) 
-  #f_ex(x) = 0.01*cos(π*x[1])*sin(π*x[2]),-0.01*sin(π*x[1])*cos(π*x[2]))
   g_ex = 0.0
   zerov = VectorValue(0.0,0.0)
   uin(x) = VectorValue(2.5*x[2]*(1-x[2]),0.0)
@@ -110,27 +108,26 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
 
     app1(p,q) = ∫(p*q)dΩ
 
-    app2(p,q) = ∫(weight*(∇(p))⋅(∇(q)))dΩ + 
-                ∫(weight/h_e*jump(p)*jump(q))dΛ +
-                ∫(weight/h_e_Γout*p*q)dΓout
+    app2(p,q) = ∫(κ*(∇(p))⋅(∇(q)))dΩ + 
+                ∫(κ/h_e*jump(p)*jump(q))dΛ +
+                ∫(κ/h_e_Γout*p*q)dΓout
 
-    #app3(p,q) = ∫(FF^(-1)*(∇(p))⋅(∇(q)))dΩ + 
-    #            ∫(FF^(-1)/h_e*jump(p)*jump(q))dΛ +
-    #            ∫(FF^(-1)/h_e_Γout*p*q)dΓout
+    app3(p,q) = ∫(FF^(-1)*(∇(p))⋅(∇(q)))dΩ + 
+                ∫(FF^(-1)/h_e*jump(p)*jump(q))dΛ +
+                ∫(FF^(-1)/h_e_Γout*p*q)dΓout
 
 
-    A22_m1 = assemble_matrix(app1,Qh,Qh_)
-    A22_m2 = assemble_matrix(app2,Qh,Qh_)
-    #A22_m3 = assemble_matrix(app3,Qh,Qh_)
+    A22_m1, A22_m2, A22_m3 = assemble_matrix(app1,Qh,Qh_), assemble_matrix(app2,Qh,Qh_), assemble_matrix(app3,Qh,Qh_)
 
-    A22lo = LinearOperator(A22_m1) + 
-            LinearOperator(A22_m2) #+ 
-            #LinearOperator(A22_m3)
-
-    A22lo_inv = LinearOperator(GridapLinearSolverPreconditioner(A22_m1)) +
-                LinearOperator(GridapLinearSolverPreconditioner(A22_m2)) #+
-                #LinearOperator(GridapLinearSolverPreconditioner(A22_m3))       
+    A22lo = LinearOperator(GridapLinearSolverPreconditioner(A22_m1)) +
+            LinearOperator(GridapLinearSolverPreconditioner(A22_m2)) +
+            LinearOperator(GridapLinearSolverPreconditioner(A22_m3))       
     
+    A22inv1 = inv(Array(A22_m1))
+    A22inv2 = inv(Array(A22_m2))
+    A22inv3 = inv(Array(A22_m3))
+    A22lo_inv = A22inv1 + A22inv2 + A22inv3
+
     eph_int = interpolate_everywhere(eph, Qh)
     eph_int_vec = get_free_dof_values(eph_int)
 
@@ -148,7 +145,7 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     end
     
     minres_callback(solver) = custom_stopping_condition(solver, A, b, r, rtol)
-    (newfreedofs, stats) = minres(A, b, M = A22lo; itmax=2000, verbose=1,
+    (newfreedofs, stats) = minres(A, b, M = A22lo; itmax=2000, verbose=0,
                                  callback=minres_callback,
                                  atol=0.0,
                                  rtol=rtol)
@@ -160,8 +157,6 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
 
     eu, ep
   end
-
-
 
   function  convergence_test(; nkmax, k=k, generate_output=false)
     eu = Float64[]
@@ -227,17 +222,17 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     end
     println("=======================================================")
     println("   DoF  &    h   &   e(u)   &  r(u) &   e(p)   &  r(p) & loss_divh ")
-    println("=======================================================")
+    println("===================== usual norms ==================================")
     for nk in 1:nkmax
         @printf("%7d & %.4f & %.2e & %.3f & %.2e & %.3f & %.2e\n", 
                 nn[nk], hh[nk], eu[nk], ru[nk], ep[nk], rp[nk], losses_divh[nk]);
     end
-    println("=======================================================")
+    println("================== p with weighting =====================================")
     for nk in 1:nkmax
         @printf("%7d & %.4f & %.2e & %.3f & %.2e & %.3f & %.2e\n", 
                 nn[nk], hh[nk], euw[nk], ruw[nk], epw[nk], rpw[nk], losses_divh[nk]);
     end
-    println("=======================================================")
+    println("=================== p with preconditioning ====================================")
     for nk in 1:nkmax
         @printf("%7d & %.4f & %.2e & %.3f & %.2e & %.3f & %.2e\n", 
                 nn[nk], hh[nk], eupre[nk], rupre[nk], eppre[nk], rppre[nk], losses_divh[nk]);
