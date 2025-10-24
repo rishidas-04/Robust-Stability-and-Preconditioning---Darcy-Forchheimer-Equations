@@ -10,10 +10,9 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
   using Krylov
   using LinearOperators
 
-  # Arbitrary model parameters
   const κ0 = 1.0E-8 # permeability
-  const r  = 4.0 # Forchheimer exponent
-  const FF = 1.0e5 # Forchheimer coefficient
+  const r  = 3.5 # Forchheimer exponent
+  const FF = 1.0e4 # Forchheimer coefficient
 
   function normu(v)
     (v⋅v>0)*(sqrt(v⋅v))^(r-2)
@@ -23,10 +22,9 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     (v⋅v>0)*(r-2)*(sqrt(v⋅v))^(r-4)*v
   end
 
-  κ(x) = κ0*(1+exp(-0.5*(10*x[2]-5.0-sin(10.0*x[1]))^2))
+  κ(x) = κ0#*(1+exp(-0.5*(10*x[2]-5.0-sin(10.0*x[1]))^2))
   κinv(x)=  1.0/κ(x)
-  weight_kinvpFF(x) = 1.0/(κinv(x)+FF)
-  weight = x->(κ(x)+FF^(-1))
+  weight_κFF(x) = 1.0/(κinv(x)+FF)
 
   f_ex = VectorValue(0,0) 
   g_ex = 0.0
@@ -38,7 +36,6 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     reffe_u = ReferenceFE(raviart_thomas,Float64,k)
     reffe_p = ReferenceFE(lagrangian,Float64,k)
 
-    # FESpaces
     Uh_ = TestFESpace(model,reffe_u,dirichlet_tags=["Gamma_in","Gamma_topbot"],conformity=:HDiv)
     Qh_ = TestFESpace(model,reffe_p,conformity=:L2)
 
@@ -91,7 +88,6 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     uh, ph, loss_divh, dΩ, dΛ, dΓout, h_e, h_e_Γout, Uh, Qh, Qh_, Gridap.FESpaces.num_free_dofs(Xh)
   end
 
-
   function compute_errorNoExact_simpleNorms(euh,eph,dΩ)
     eu = (sum(∫((euh⋅euh).^(0.5*3.0))dΩ))^(1.0/3.0) + sqrt(sum(∫((∇⋅euh)*(∇⋅euh))*dΩ))
     ep = sqrt(sum(∫(eph*eph)*dΩ))
@@ -100,7 +96,7 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
 
   function compute_errorNoExact_weightedNorms(euh,eph,dΩ)
     eu = sqrt(sum(∫(κinv*euh⋅euh)dΩ)) + (sum(∫(FF*(euh⋅euh).^(0.5*3.0))dΩ))^(1.0/3.0) + sqrt(sum(∫((∇⋅euh)*(∇⋅euh))*dΩ))
-    ep = sqrt(sum(∫(weight_kinvpFF*eph*eph)*dΩ))
+    ep = sqrt(sum(∫(weight_κFF*eph*eph)*dΩ))
     eu, ep
   end
 
@@ -240,5 +236,5 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     println("=======================================================")
 
   end
-  convergence_test(;nkmax=5,k=0,generate_output=false)
+  convergence_test(;nkmax=5,k=1,generate_output=false)
 end
