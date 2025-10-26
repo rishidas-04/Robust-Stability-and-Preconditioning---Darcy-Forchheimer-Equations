@@ -12,6 +12,7 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
 
   const κ0 = 1.0E-8 # permeability
   const r  = 3.5 # Forchheimer exponent
+  const s  = 1.5 # exponent for pressure preconditioner
   const FF = 1.0e4 # Forchheimer coefficient
 
   function normu(v)
@@ -50,7 +51,8 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     Λ = SkeletonTriangulation(model)
     dΛ = Measure(Λ,2*(k+2)-1)
     h_e = CellField(get_array(∫(1)dΛ), Λ)
-    
+    n_Λ = get_normal_vector(Λ)
+
     Γout = BoundaryTriangulation(model, tags = "Gamma_out")
     n_Γout = get_normal_vector(Γout)
     dΓout = Measure(Γout,2*(k+2)-1)
@@ -100,18 +102,28 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     eu, ep
   end
 
-  function compute_errorNoExact_preconditionerNorms(euh,eph,Qh,Qh_,dΩ,dΛ,dΓout,h_e,h_e_Γout)
+  function compute_errorNoExact_preconditionerNorms(euh,eph,pref,Qh,Qh_,dΩ,dΛ,dΓout,h_e,h_e_Γout;k=0)
 
     app1(p,q) = ∫(p*q)dΩ
 
-    app2(p,q) = ∫(κ*(∇(p))⋅(∇(q)))dΩ + 
+    app2(p,q) = ∫(κ*(∇(p))⋅(∇(q)))dΩ +
                 ∫(κ/h_e*jump(p)*jump(q))dΛ +
-                ∫(κ/h_e_Γout*p*q)dΓout
-
-    app3(p,q) = ∫(FF^(-1)*(∇(p))⋅(∇(q)))dΩ + 
-                ∫(FF^(-1)/h_e*jump(p)*jump(q))dΛ +
-                ∫(FF^(-1)/h_e_Γout*p*q)dΓout
-
+                ∫(κ/h_e_Γout*p*q)dΓout 
+         
+    if k == 0
+      function  app3_low(p,q) 
+        ∫(FF^(-1)*(∇(p))⋅(∇(q)))dΩ + 
+                  ∫(FF^(-1)/h_e*jump(p)*jump(q))dΛ +
+                  ∫(FF^(-1)/h_e_Γout*p*q)dΓout 
+      end
+    app3 = app3_low  
+    else
+      app3_high(p,q) = ∫(FF^(-1)*((∇(pref)⋅∇(pref)).^((s-2)/2) ).*(∇(p)⋅∇(q)))dΩ +
+                  ∫(FF^(-1)*(s-2)*( (∇(pref)⋅∇(pref)).^((s-4)/2)).*((∇(pref)⋅∇(p)).*(∇(pref)⋅∇(q))))dΩ +
+                  ∫(FF^(-1)/h_e*jump(p)*jump(q))dΛ +
+                  ∫(FF^(-1)/h_e_Γout*p*q)dΓout
+      app3 = app3_high
+    end
 
     A22_m1, A22_m2, A22_m3 = assemble_matrix(app1,Qh,Qh_), assemble_matrix(app2,Qh,Qh_), assemble_matrix(app3,Qh,Qh_)
 
@@ -179,13 +191,13 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
 
     modelfine = generate_rectangle(7)
     setup_model_labels_rectangle_channel!(modelfine)
-    uref,pref,_,_,_,_ = solve_ForchheimerNoExact(modelfine; k=k, generate_output=false)
+    uref,pref,_,_,_,_,_,_ = solve_ForchheimerNoExact(modelfine; k=k, generate_output=false)
 
     for nk in 1:nkmax
         println("******** Refinement step: $nk")
         model=generate_rectangle(nk-1)
         setup_model_labels_rectangle_channel!(model)
-        uh,ph,loss_divh, dΩ, dΛ, dΓout, h_e, h_e_Γout, Uh, Qh, Qh_, ndofs=solve_ForchheimerNoExact(model; k=k, generate_output=generate_output)
+        uh,ph,loss_divh, dΩ, dΛ, dΓout,  h_e, h_e_Γout, Uh, Qh, Qh_, ndofs=solve_ForchheimerNoExact(model; k=k, generate_output=generate_output)
         ur_ = Interpolable(uref)
         pr_ = Interpolable(pref)  
         ur = interpolate_everywhere(ur_, Uh)
@@ -193,7 +205,7 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
         
         error_u,error_p = compute_errorNoExact_simpleNorms(ur - uh,pr-ph,dΩ)
         error_uw,error_pw = compute_errorNoExact_weightedNorms(ur-uh,pr-ph,dΩ)
-        error_upre,error_ppre = compute_errorNoExact_preconditionerNorms(ur-uh,pr-ph,Qh,Qh_,dΩ,dΛ,dΓout,h_e,h_e_Γout)
+        error_upre,error_ppre = compute_errorNoExact_preconditionerNorms(ur-uh,pr-ph,pr,Qh,Qh_,dΩ,dΛ,dΓout,h_e,h_e_Γout;k=k)
 
         push!(nn,ndofs)
         push!(hh,sqrt(2)/(2^nk))
@@ -236,5 +248,5 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     println("=======================================================")
 
   end
-  convergence_test(;nkmax=5,k=1,generate_output=false)
+  convergence_test(;nkmax=5,k=0,generate_output=false)
 end
