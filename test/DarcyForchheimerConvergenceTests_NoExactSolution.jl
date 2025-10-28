@@ -23,7 +23,7 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     (v⋅v>0)*(r-2)*(sqrt(v⋅v))^(r-4)*v
   end
 
-  κ(x) = κ0#*(1+exp(-0.5*(10*x[2]-5.0-sin(10.0*x[1]))^2))
+  κ(x) = κ0*(1+exp(-0.5*(10*x[2]-5.0-sin(10.0*x[1]))^2))
   κinv(x)=  1.0/κ(x)
   weight_κFF(x) = 1.0/(κinv(x)+FF)
 
@@ -116,12 +116,15 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
                   ∫(FF^(-1)/h_e*jump(p)*jump(q))dΛ +
                   ∫(FF^(-1)/h_e_Γout*p*q)dΓout 
       end
-    app3 = app3_low  
+      app3 = app3_low  
     else
-      app3_high(p,q) = ∫(FF^(-1)*((∇(pref)⋅∇(pref)).^((s-2)/2) ).*(∇(p)⋅∇(q)))dΩ +
-                  ∫(FF^(-1)*(s-2)*( (∇(pref)⋅∇(pref)).^((s-4)/2)).*((∇(pref)⋅∇(p)).*(∇(pref)⋅∇(q))))dΩ +
-                  ∫(FF^(-1)/h_e*jump(p)*jump(q))dΛ +
-                  ∫(FF^(-1)/h_e_Γout*p*q)dΓout
+      small_ = 1.0e-10
+      function app3_high(p,q) 
+        ∫(FF^(-1)*((∇(pref)⋅∇(pref)).^((s-2)/2) ).*(∇(p)⋅∇(q)))dΩ +
+        ∫(FF^(-1)*(s-2)*( (∇(pref)⋅∇(pref)).^((s-4)/2)).*((∇(pref)⋅∇(p)).*(∇(pref)⋅∇(q))))dΩ +
+        ∫(FF^(-1)*(s-1)*((jump(pref)*jump(pref)+small_).^((s-2)/2)).*h_e.^(1-s)*jump(p)*jump(q))dΛ +
+        ∫(FF^(-1)*(s-1)*((pref*pref).^((s-2)/2)).*h_e_Γout.^(1-s)*p*q)dΓout
+      end
       app3 = app3_high
     end
 
@@ -146,8 +149,8 @@ module DarcyForchheimerConvergenceTests_NoExactSolution
     rtol=1.0e-14
     function custom_stopping_condition(solver, A, b, r, tol)
       mul!(r, A, solver.x)
-      r .-= b                       # r := b - Ax
-      bool = norm(r) ≤ tol*norm(b)  # tolerance based on the 2-norm of the residual
+      r .-= b                        
+      bool = norm(r) ≤ tol*norm(b)   
       @printf("ERR NORM: ||b-Ax||/||b||: %16.7e\n",norm(r)/norm(b))
       return bool
     end
